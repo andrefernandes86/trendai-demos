@@ -65,6 +65,11 @@
   .switch span:before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
   .switch input:checked + span { background: var(--red); }
   .switch input:checked + span:before { transform: translateX(16px); }
+  .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2px 16px; }
+  .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13px; margin: 6px 0; }
+  .tag.ok { border-color: rgba(34,197,94,.45); color: #86efac; }
+  .tag.bad { border-color: rgba(248,113,113,.5); color: #fca5a5; }
+  .tag.warn { border-color: rgba(245,158,11,.5); color: #fcd34d; }
   .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
   .mode { border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; background: var(--bg3); }
   .mode.on { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
@@ -90,7 +95,8 @@
     <a data-s="overview" class="on">Overview</a>
     <a data-s="challenges">Challenges <span class="count" id="navCh"></span></a>
     <a data-s="activity">Live activity <span class="count" id="navEv"></span></a>
-    <a data-s="guardrails">Guardrails</a>
+    <a data-s="trend">TrendAI protection <span class="count" id="navTr"></span></a>
+    <a data-s="guardrails">Built-in guardrails</a>
     <a data-s="llm">LLM backend</a>
     <a data-s="prompts">System prompts</a>
   </nav>
@@ -106,7 +112,7 @@
     <div class="stats">
       <div class="stat"><div class="k">Challenges enabled</div><div class="v" id="stCh">–</div></div>
       <div class="stat"><div class="k">Challenges triggered</div><div class="v" id="stHit">–</div></div>
-      <div class="stat"><div class="k">Guardrail</div><div class="v" id="stGr">–</div></div>
+      <div class="stat"><div class="k">Protection</div><div class="v" id="stGr" style="font-size:15px">–</div></div>
       <div class="stat"><div class="k">LLM</div><div class="v" id="stLlm" style="font-size:15px">–</div></div>
     </div>
     <div class="card">
@@ -126,11 +132,13 @@
     </div>
     <div class="card">
       <h2>Presets</h2>
-      <div class="sub">Vulnerable = every challenge on, guardrail off (baseline run). Hardened = every challenge off (re-test run). Reset data restores balances,
-        prescriptions and the knowledge base and clears the log.</div>
+      <div class="sub"><b>All vulnerable</b>: every challenge on, all protection off (baseline run). <b>Protect with TrendAI</b>: same vulnerable app with AI Guard and
+        File Security switched on (needs API keys). <b>Hardened code</b>: every challenge fixed in the app itself. <b>Reset data &amp; log</b> restores balances, prescriptions,
+        uploads and the knowledge base, and clears the log.</div>
       <div class="btns">
         <button class="primary" id="pVuln">All vulnerable</button>
-        <button id="pHard">Hardened</button>
+        <button id="pTrend">Protect with TrendAI</button>
+        <button id="pHard">Hardened code</button>
         <button id="pReset">Reset data &amp; log</button>
       </div>
       <div class="msg" id="presetMsg"></div>
@@ -140,7 +148,7 @@
   <!-- ============ CHALLENGES ============ -->
   <section id="s-challenges">
     <h1>Challenges &amp; answer key</h1>
-    <p class="lead">The same 17 weaknesses exist in both businesses. Each one is mapped to OWASP LLM Top 10 (2025) and MITRE ATLAS, along with the Vantyr agent
+    <p class="lead">The same 18 weaknesses exist in both businesses. Each one is mapped to OWASP LLM Top 10 (2025) and MITRE ATLAS, along with the Vantyr agent
       expected to find it. Toggle a challenge off to apply its fix. <span class="tag hit">seen ×n</span> means the live log saw it exercised.</p>
     <label style="max-width:280px">Show examples for<select id="tenSel"><option value="finance">Northbridge Bank (finance)</option><option value="healthcare">Meridian Health (healthcare)</option></select></label>
     <div class="card" style="padding:6px 10px">
@@ -159,25 +167,72 @@
     <div class="card"><h2>Event log</h2><div class="sub">Newest first · refreshes every 3 s.</div><div id="events"></div></div>
   </section>
 
-  <!-- ============ GUARDRAILS ============ -->
+  <!-- ============ TRENDAI PROTECTION ============ -->
+  <section id="s-trend">
+    <h1>TrendAI protection</h1>
+    <p class="lead">Put TrendAI Vision One in front of both assistants without changing their vulnerable code. <b>AI Guard</b> inspects every prompt, response,
+      retrieved article, MCP call and the text inside every uploaded document. <b>File Security</b> scans every uploaded file for malware. Typical demo: run Vantyr against
+      the vulnerable app, turn these on, reset, and run it again.</p>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div><h2>TrendAI Vision One AI Guard</h2><div class="sub" style="margin:0">Prompt-injection, jailbreak, harmful content and sensitive-data checks.</div></div>
+        <label class="switch"><input type="checkbox" id="agOn"><span></span></label>
+      </div>
+      <div class="row">
+        <div><label>API key <span id="agSet" class="ok"></span></label><input type="password" id="agKey" placeholder="Leave blank to keep the current key"></div>
+        <div><label>Region</label><select id="agRegion"></select></div>
+      </div>
+      <label>Endpoint</label><input type="text" id="agUrl">
+      <label>Scan</label>
+      <div class="checks">
+        <label><input type="checkbox" id="agPrompts"> User prompts (every chat format)</label>
+        <label><input type="checkbox" id="agResponses"> Model responses</label>
+        <label><input type="checkbox" id="agContext"> Retrieved knowledge-base articles</label>
+        <label><input type="checkbox" id="agFiles"> Uploaded documents and articles (extracted text)</label>
+        <label><input type="checkbox" id="agMcp"> MCP tool-call arguments</label>
+        <label><input type="checkbox" id="agFail"> Fail closed (block if AI Guard is unreachable or content exceeds the chunk cap)</label>
+      </div>
+      <div class="row">
+        <div><label>Chunk size (KB) <span style="color:var(--muted)">· AI Guard limit is 50 KB per request</span></label><input type="number" id="agChunk" min="4" max="50"></div>
+        <div><label>Max chunks per item</label><input type="number" id="agMax" min="1" max="500"></div>
+      </div>
+      <div class="sub" style="margin-top:10px" id="agExplain"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap">
+        <div><h2>TrendAI Vision One File Security</h2><div class="sub" style="margin:0" id="fsSdk">Malware scan of every chat attachment and knowledge-base upload (SDK, in-memory buffer).</div></div>
+        <label class="switch"><input type="checkbox" id="fsOn"><span></span></label>
+      </div>
+      <div class="row">
+        <div><label>API key <span id="fsSet" class="ok"></span></label><input type="password" id="fsKey" placeholder="Leave blank to keep the current key"></div>
+        <div><label>Region</label><select id="fsRegion"></select></div>
+      </div>
+      <div class="checks">
+        <label><input type="checkbox" id="fsPml"> Predictive Machine Learning (PML)</label>
+        <label><input type="checkbox" id="fsFail"> Fail closed (reject the file if the scan cannot complete)</label>
+      </div>
+    </div>
+    <div class="btns"><button class="primary" id="saveTrend">Save TrendAI protection</button></div>
+    <div class="msg" id="trendMsg"></div>
+    <div class="card" style="margin-top:16px">
+      <h2>Test files</h2>
+      <div class="sub">Download, then upload them in the app (📎 in the chat, or Knowledge Center → Publish).</div>
+      <table><tbody id="samples"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ============ BUILT-IN GUARDRAILS ============ -->
   <section id="s-guardrails">
-    <h1>Guardrails</h1>
-    <p class="lead">An input and output safety layer in front of both assistants. Run Vantyr's Guardrail Validation agent with each mode to compare block rates.</p>
+    <h1>Built-in guardrails</h1>
+    <p class="lead">Simple home-grown guardrails, kept for comparison runs. They stack with TrendAI protection. Run Vantyr's Guardrail Validation agent with each one to compare block rates.</p>
     <div class="card">
       <div class="modes" id="modes">
         <div class="mode" data-m="off"><b>Off</b><span>No filtering. Baseline.</span></div>
         <div class="mode" data-m="basic"><b>Basic keyword filter</b><span>Regex for common injection and jailbreak phrases; redacts secret-shaped strings in output.</span></div>
         <div class="mode" data-m="llm_judge"><b>LLM judge</b><span>The same local model classifies each prompt SAFE/UNSAFE before answering.</span></div>
-        <div class="mode" data-m="ai_guard"><b>TrendAI Vision One AI Guard</b><span>Prompts and responses checked by AI Guard. Needs an API key.</span></div>
       </div>
-      <label style="margin-top:16px"><input type="checkbox" id="chkOut"> Also check model output</label>
-    </div>
-    <div class="card">
-      <h2>TrendAI Vision One AI Guard</h2>
-      <div class="sub">Kept in memory only. If AI Guard is unreachable, requests are allowed (fail-open) and the event log says so.</div>
-      <label>API key <span id="agSet" class="ok"></span></label><input type="password" id="agKey" placeholder="Leave blank to keep the current key">
-      <label>Endpoint</label><input type="text" id="agUrl">
-      <div class="btns"><button class="primary" id="saveGr">Save guardrails</button></div>
+      <label style="margin-top:16px"><input type="checkbox" id="chkOut"> Also redact secrets in model output</label>
+      <div class="btns"><button class="primary" id="saveGr">Save</button></div>
       <div class="msg" id="grMsg"></div>
     </div>
   </section>
@@ -219,7 +274,8 @@
 
   let CFG = null, CH = [], HITS = {}, chTenant = 'finance', spTenant = 'finance';
   const DEFAULT_URLS = { ollama: 'http://ollama:11434', vllm: 'http://vllm:8000/v1', openai: 'https://' };
-  const MODE_LABEL = { off: 'Off', basic: 'Basic', llm_judge: 'LLM judge', ai_guard: 'AI Guard' };
+  const MODE_LABEL = { off: 'Off', basic: 'Basic filter', llm_judge: 'LLM judge' };
+  const ENGINE = { ai_guard: 'AI Guard', file_security: 'File Security' };
 
   // ---- navigation (side menu only) ----
   function show(s) {
@@ -237,7 +293,6 @@
   function renderAll() {
     const en = Object.values(CFG.challenges).filter(Boolean).length;
     $('stCh').innerHTML = `${en}<small> / ${CH.length}</small>`;
-    $('stGr').textContent = MODE_LABEL[CFG.guardrail.mode];
     $('stLlm').textContent = `${CFG.llm.model} · ${CFG.llm.provider}`;
     $('navCh').textContent = `${en}/${CH.length}`;
     $('pubUrl').value = CFG.public_base_url || '';
@@ -252,11 +307,29 @@
     }
     let host = b; try { host = new URL(b).hostname; } catch (_) {}
     $('scope').textContent = JSON.stringify({ authorized_targets: [host], ai_endpoints: eps }, null, 2);
-    // guardrails
+    // built-in guardrails
     document.querySelectorAll('.mode').forEach((m) => m.classList.toggle('on', m.dataset.m === CFG.guardrail.mode));
     $('chkOut').checked = CFG.guardrail.check_output;
-    $('agUrl').value = CFG.guardrail.ai_guard_url;
-    $('agSet').textContent = CFG.guardrail.ai_guard_key_set ? `✓ set (${CFG.guardrail.ai_guard_key_masked})` : '';
+    // TrendAI protection
+    const ag = CFG.trend.ai_guard, fs = CFG.trend.file_security, meta = CFG.meta;
+    $('agOn').checked = ag.enabled; $('fsOn').checked = fs.enabled;
+    $('agRegion').innerHTML = Object.keys(meta.ai_guard_regions).map((r) => `<option value="${r}">${r.toUpperCase()} · ${esc(meta.ai_guard_regions[r].replace('https://', ''))}</option>`).join('');
+    $('agRegion').value = ag.region; $('agUrl').value = ag.url;
+    $('agSet').textContent = ag.key_set ? `✓ set (${ag.key_masked})` : '';
+    [['agPrompts', 'scan_prompts'], ['agResponses', 'scan_responses'], ['agContext', 'scan_context'], ['agFiles', 'scan_files'], ['agMcp', 'scan_mcp'], ['agFail', 'fail_closed']]
+      .forEach(([id, k]) => { $(id).checked = !!ag[k]; });
+    $('agChunk').value = Math.round(ag.max_bytes / 1024); $('agMax').value = ag.max_chunks;
+    $('agExplain').innerHTML = `Content larger than <b>${Math.round(ag.max_bytes / 1024)} KB</b> (measured on the exact JSON request; the AI Guard limit is ${Math.round(ag.limit_bytes / 1024)} KB) is split on paragraph or line boundaries
+      into chunks with a 400-character overlap, so an instruction that spans a boundary is still seen whole. Every chunk is scanned in parallel, and one blocked chunk blocks the item.
+      At most ${ag.max_chunks} chunks (≈${(ag.max_chunks * ag.max_bytes / 1048576).toFixed(1)} MB of text) per item. Beyond that, the item is ${ag.fail_closed ? 'blocked' : 'flagged as partially inspected'}.`;
+    $('fsRegion').innerHTML = meta.v1fs_regions.map((r) => `<option>${r}</option>`).join('');
+    $('fsRegion').value = fs.region; $('fsPml').checked = fs.pml; $('fsFail').checked = fs.fail_closed;
+    $('fsSet').textContent = fs.key_set ? `✓ set (${fs.key_masked})` : '';
+    $('fsSdk').innerHTML = 'Malware scan of every chat attachment and knowledge-base upload (SDK, in-memory buffer). ' + (fs.sdk_available ? '' : '<span class="bad">SDK not installed in this image.</span>');
+    const prot = [ag.enabled && 'AI Guard', fs.enabled && 'File Security'].filter(Boolean);
+    const builtIn = CFG.guardrail.mode !== 'off' ? MODE_LABEL[CFG.guardrail.mode] : '';
+    $('stGr').textContent = [...prot, builtIn].filter(Boolean).join(' + ') || 'None';
+    $('navTr').textContent = prot.length ? `${prot.length}/2 on` : 'off';
     // llm
     $('prov').value = CFG.llm.provider; $('baseUrl').value = CFG.llm.base_url; $('model').value = CFG.llm.model;
     $('temp').value = CFG.llm.temperature;
@@ -291,19 +364,44 @@
   $('savePub').onclick = async () => { CFG = await post('/admin/api/config', { public_base_url: $('pubUrl').value }); renderAll(); };
   $('copyScope').onclick = () => navigator.clipboard?.writeText($('scope').textContent).then(() => { $('copyScope').textContent = 'Copied ✓'; setTimeout(() => $('copyScope').textContent = 'Copy JSON', 1500); });
   const allCh = (v) => Object.fromEntries(CH.map((c) => [c.id, v]));
-  $('pVuln').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(true), guardrail: { mode: 'off' } }); renderAll(); $('presetMsg').textContent = 'All challenges enabled, guardrail off.'; };
-  $('pHard').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(false) }); renderAll(); $('presetMsg').textContent = 'All challenges disabled (hardened). Pick a guardrail mode under Guardrails too.'; };
+  $('pVuln').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(true), guardrail: { mode: 'off' }, trend: { ai_guard: { enabled: false }, file_security: { enabled: false } } }); renderAll(); $('presetMsg').textContent = 'All challenges enabled, all protection off.'; };
+  $('pTrend').onclick = async () => {
+    CFG = await post('/admin/api/config', { trend: { ai_guard: { enabled: true, scan_prompts: true, scan_responses: true, scan_context: true, scan_files: true, scan_mcp: true }, file_security: { enabled: true } } });
+    renderAll();
+    const miss = [!CFG.trend.ai_guard.key_set && 'AI Guard', !CFG.trend.file_security.key_set && 'File Security'].filter(Boolean);
+    $('presetMsg').innerHTML = miss.length ? `<span class="warn">Enabled, but no API key is set for ${miss.join(' and ')}. Add it under TrendAI protection.</span>` : '<span class="ok">AI Guard and File Security are now protecting both assistants.</span>';
+  };
+  $('pHard').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(false) }); renderAll(); $('presetMsg').textContent = 'All challenges fixed in the app code (hardened).'; };
   $('pReset').onclick = async () => { await post('/admin/api/reset', {}); lastTs = 0; $('presetMsg').textContent = 'Data and log reset.'; poll(); };
 
   // ---- guardrails ----
   document.querySelectorAll('.mode').forEach((m) => m.onclick = () => { document.querySelectorAll('.mode').forEach((x) => x.classList.toggle('on', x === m)); });
   $('saveGr').onclick = async () => {
     const mode = document.querySelector('.mode.on')?.dataset.m || 'off';
-    const g = { mode, check_output: $('chkOut').checked, ai_guard_url: $('agUrl').value };
-    if ($('agKey').value) g.ai_guard_key = $('agKey').value;
-    try { CFG = await post('/admin/api/config', { guardrail: g }); $('agKey').value = ''; renderAll(); $('grMsg').innerHTML = '<span class="ok">Saved.</span>' + (mode === 'ai_guard' && !CFG.guardrail.ai_guard_key_set ? ' <span class="warn">No AI Guard key set, so requests will be allowed.</span>' : ''); }
+    try { CFG = await post('/admin/api/config', { guardrail: { mode, check_output: $('chkOut').checked } }); renderAll(); $('grMsg').innerHTML = '<span class="ok">Saved.</span>'; }
     catch (e) { $('grMsg').innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
   };
+  $('agRegion').onchange = () => { $('agUrl').value = CFG.meta.ai_guard_regions[$('agRegion').value] + CFG.meta.ai_guard_path; };
+  $('saveTrend').onclick = async () => {
+    const ag = { enabled: $('agOn').checked, region: $('agRegion').value, url: $('agUrl').value,
+      scan_prompts: $('agPrompts').checked, scan_responses: $('agResponses').checked, scan_context: $('agContext').checked,
+      scan_files: $('agFiles').checked, scan_mcp: $('agMcp').checked, fail_closed: $('agFail').checked,
+      max_bytes: Math.round(parseFloat($('agChunk').value || '48') * 1024), max_chunks: parseInt($('agMax').value || '64', 10) };
+    if ($('agKey').value) ag.key = $('agKey').value;
+    const fs = { enabled: $('fsOn').checked, region: $('fsRegion').value, pml: $('fsPml').checked, fail_closed: $('fsFail').checked };
+    if ($('fsKey').value) fs.key = $('fsKey').value;
+    try {
+      CFG = await post('/admin/api/config', { trend: { ai_guard: ag, file_security: fs } });
+      $('agKey').value = ''; $('fsKey').value = ''; renderAll();
+      const warn = [];
+      if (CFG.trend.ai_guard.enabled && !CFG.trend.ai_guard.key_set) warn.push(`AI Guard has no API key, so it will ${CFG.trend.ai_guard.fail_closed ? 'block' : 'allow (and log)'} everything.`);
+      if (CFG.trend.file_security.enabled && !CFG.trend.file_security.key_set) warn.push(`File Security has no API key, so uploads will be ${CFG.trend.file_security.fail_closed ? 'rejected' : 'allowed unscanned'}.`);
+      $('trendMsg').innerHTML = '<span class="ok">Saved.</span> ' + warn.map((w) => `<span class="warn">${esc(w)}</span>`).join(' ');
+    } catch (e) { $('trendMsg').innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  };
+  api('/admin/api/samples').then((d) => {
+    $('samples').innerHTML = d.samples.map((x) => `<tr><td style="white-space:nowrap"><a style="color:var(--blue)" href="${BASE}/admin/api/samples/${encodeURIComponent(x.name)}" download>${esc(x.name)}</a></td><td class="d">${esc(x.description)}</td></tr>`).join('');
+  }).catch(() => {});
 
   // ---- llm ----
   $('prov').onchange = () => { if (!$('baseUrl').value || Object.values(DEFAULT_URLS).includes($('baseUrl').value)) $('baseUrl').value = DEFAULT_URLS[$('prov').value]; };
@@ -333,9 +431,13 @@
       const seen = Object.keys(HITS).length;
       $('stHit').innerHTML = `${seen}<small> / ${CH.length}</small>`;
       $('navEv').textContent = events.length ? events.length : '';
-      const byCh = { chat: 0, mcp: 0, infra: 0, blocked: 0 };
-      events.forEach((e) => { if (e.channel === 'mcp') byCh.mcp++; else if (e.channel === 'infra') byCh.infra++; else byCh.chat++; if (e.blocked) byCh.blocked++; });
-      $('actStats').innerHTML = [['Chat turns', byCh.chat], ['MCP calls', byCh.mcp], ['Infra probes', byCh.infra], ['Blocked', byCh.blocked], ['Challenges seen', `${seen}/${CH.length}`]]
+      const byCh = { chat: 0, files: 0, mcp: 0, infra: 0, trend: 0, blocked: 0 };
+      events.forEach((e) => {
+        if (e.channel === 'mcp') byCh.mcp++; else if (e.channel === 'infra') byCh.infra++; else if (String(e.channel).startsWith('file-upload')) byCh.files++; else byCh.chat++;
+        if (e.blocked) byCh.blocked++;
+        if ((e.protection || []).some((c) => c.verdict === 'block')) byCh.trend++;
+      });
+      $('actStats').innerHTML = [['Chat turns', byCh.chat], ['File uploads', byCh.files], ['MCP calls', byCh.mcp], ['Infra probes', byCh.infra], ['Blocked by TrendAI', byCh.trend], ['Blocked (all)', byCh.blocked], ['Challenges seen', `${seen}/${CH.length}`]]
         .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
       const acts = [];
       for (const [t, list] of Object.entries(d.actions || {})) list.forEach((a) => acts.push({ t, ...a }));
@@ -349,9 +451,14 @@
     const tools = (e.tools || []).map((t) => `<span class="tag">${esc(t.name)}</span>`).join('');
     const hits = (e.hits || []).map((h) => `<span class="tag hit">${h}</span>`).join('');
     const gr = e.guard && e.guard.mode && e.guard.mode !== 'off' ? `<span class="tag">${esc(MODE_LABEL[e.guard.mode] || e.guard.mode)}${e.guard.reason ? ': ' + esc(String(e.guard.reason).slice(0, 80)) : ''}</span>` : '';
+    const prot = (e.protection || []).map((c) => {
+      const cls = c.verdict === 'block' ? 'bad' : (c.verdict === 'allow' ? 'ok' : 'warn');
+      const extra = c.chunks > 1 ? ` · ${c.chunks} chunks${(c.blocked_chunks || []).length ? ` (#${c.blocked_chunks.map((i) => i + 1).join(',')} blocked)` : ''}` : '';
+      return `<span class="tag ${cls}" title="${esc(c.reason || '')}">🛡 ${ENGINE[c.engine] || c.engine} · ${esc(c.stage)} · ${esc(c.verdict)}${extra}</span>`;
+    }).join('');
     return `<div class="ev"><div class="top"><span>${new Date(e.ts * 1000).toLocaleTimeString()}</span><span class="tag">${esc(e.tenant)}</span><span class="tag">${esc(e.channel)}</span>
-      <span>${esc(e.ip)}</span>${e.blocked ? '<span class="tag warn">blocked</span>' : ''}${e.error ? '<span class="tag bad">error</span>' : ''}${gr}${tools}${hits}</div>
-      <div class="io"><b>in</b> ${esc(e.input)}</div>${e.output ? `<div class="io"><b>out</b> ${esc(String(e.output).slice(0, 500))}</div>` : ''}</div>`;
+      <span>${esc(e.ip)}</span>${e.blocked ? '<span class="tag warn">blocked</span>' : ''}${e.error ? '<span class="tag bad">error</span>' : ''}${gr}${prot}${tools}${hits}</div>
+      <div class="io"><b>in</b> ${esc(e.input)}</div>${e.blocked_by ? `<div class="io"><b>blocked by</b> ${esc(e.blocked_by)}</div>` : ''}${e.output ? `<div class="io"><b>out</b> ${esc(String(e.output).slice(0, 500))}</div>` : ''}</div>`;
   }
 
   (async () => {

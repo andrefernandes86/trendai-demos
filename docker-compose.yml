@@ -168,6 +168,12 @@ services:
       LLM_MODEL: ${AI_TARGET_MODEL:-qwen2.5:3b}
       LLM_API_KEY: ${AI_TARGET_LLM_API_KEY:-}
       PUBLIC_BASE_URL: ${AI_TARGET_PUBLIC_URL:-}
+      # TrendAI Vision One protection (optional here; also settable in the
+      # control panel). A key present at start-up switches that engine on.
+      V1_AI_GUARD_API_KEY: ${V1_AI_GUARD_API_KEY:-}
+      V1_AI_GUARD_REGION: ${V1_AI_GUARD_REGION:-us}
+      V1FS_API_KEY: ${V1FS_API_KEY:-}
+      V1FS_REGION: ${V1FS_REGION:-us-east-1}
     depends_on:
       - ollama
     restart: unless-stopped

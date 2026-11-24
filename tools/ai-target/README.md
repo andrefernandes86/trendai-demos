@@ -41,6 +41,7 @@ Keep `8090` on a lab network. Never route it through the public Cloudflare tunne
 | `/{tenant}/v1/chat/completions` | OpenAI-compatible |
 | `/{tenant}/api/chat`, `/{tenant}/api/generate` | Ollama-compatible |
 | `/{tenant}/api/kb` | Knowledge base: GET list, POST `{title, content}` publish |
+| `/{tenant}/api/files` | Multipart upload (`file`, `purpose=chat|kb`, `title`). Chat attachments are then sent as `"attachments": [file_id]` to `/{tenant}/chat` |
 | `/{tenant}/mcp` | MCP over streamable HTTP (JSON-RPC: initialize, tools/*, resources/*, prompts/*) |
 | `/api/tags`, `/v1/models` | Exposed model server (C13) |
 | `/api/v1/heartbeat`, `/api/v1/collections`, `/collections` | Exposed vector DB (C14) |
@@ -50,7 +51,7 @@ Keep `8090` on a lab network. Never route it through the public Cloudflare tunne
 
 ## Challenges (answer key)
 
-The same 17 weaknesses exist in both tenants, and each can be switched off
+The same 18 weaknesses exist in both tenants, and each can be switched off
 (fixed) from the control panel:
 
 | ID | Weakness | OWASP LLM 2025 | ATLAS |
@@ -72,6 +73,7 @@ The same 17 weaknesses exist in both tenants, and each can be switched off
 | C15 | AI provider key leaked in client JS | LLM02 | AML.T0055 |
 | C16 | Improper output handling (HTML/script rendered) | LLM05 | AML.T0050 |
 | C17 | Unbounded consumption (no rate/size/token limits) | LLM10 | AML.T0034 |
+| C18 | Untrusted file uploads (malware, hidden text in documents) | LLM01 / LLM04 | AML.T0051.001 |
 
 The **Live activity** page tags every request with the challenges it actually
 exercised: a leaked secret, another customer's record, an executed transfer, a
@@ -79,11 +81,57 @@ followed poisoned document, an echoed `VANTYR-*` canary, an anonymous MCP
 `tools/list`, and so on. That log is the ground truth to score a red-team report
 against.
 
-## Guardrail modes
+## TrendAI Vision One protection
+
+The **Protect with TrendAI** preset (or the *TrendAI protection* page) puts two
+engines in front of both assistants **without changing their vulnerable code**:
+
+| What | AI Guard | File Security |
+|---|---|---|
+| User prompts (app, OpenAI, Ollama formats, plus client-supplied system text) | ✓ | |
+| Retrieved knowledge-base articles (blocked articles never reach the model) | ✓ | |
+| Model responses | ✓ | |
+| MCP `tools/call` arguments | ✓ | |
+| Knowledge-base articles published as text | ✓ | |
+| Every uploaded file: chat attachments and KB documents | ✓ on the extracted text | ✓ malware (+ PML), SDK `scan_buffer` |
+
+**Documents are content-scanned, not only malware-scanned.** Text is extracted
+from `.txt/.md/.csv/.json/.html/...`, `.pdf` (pypdf) and `.docx` (python-docx:
+paragraphs, tables, headers and footers, including hidden white or tiny text).
+That text goes through AI Guard. A file is rejected if either engine blocks it.
+
+**AI Guard's 50 KB request limit.** Any item larger than the chunk size
+(default 48 KB, measured on the exact JSON body sent, so escaping and multi-byte
+characters count) is split on paragraph, line or word boundaries into chunks
+with a 400-character overlap, so an instruction that straddles a boundary is
+still seen whole. All chunks are scanned in parallel, with at most 4 requests in
+flight and identical content cached. **One blocked chunk blocks the item.** The
+cap is 64 chunks (about 3 MB of text). Beyond it, the item is blocked when
+*fail closed* is on, otherwise reported as `partial`. This applies to prompts too
+(C17 allows unbounded input).
+
+Failure behaviour: AI Guard is fail-open by default (logged as `error`) and
+File Security is fail-closed by default (the file is rejected). Both can be changed.
+
+| Env | Default |
+|---|---|
+| `V1_AI_GUARD_API_KEY` | empty. Setting it turns AI Guard on at start-up |
+| `V1_AI_GUARD_REGION` | `us` (`eu`, `jp`, `sg`, `au`, `in`, `mea`) |
+| `V1_AI_GUARD_URL` | regional `.../beta/aiSecurity/guard` |
+| `AI_GUARD_MAX_BYTES` / `AI_GUARD_MAX_CHUNKS` | `49152` / `64` |
+| `V1FS_API_KEY` | empty. Setting it turns File Security on at start-up |
+| `V1FS_REGION` | `us-east-1` |
+
+**Test files** (control panel → TrendAI protection): an EICAR "statement"
+(File Security), Word documents with hidden white 1-pt injections for each
+tenant (AI Guard content scan), and ~160 KB handbooks whose injection sits about
+135 KB in (only caught because every 50 KB chunk is scanned). The EICAR string
+and the documents are generated at runtime and are not stored in the repository.
+
+## Built-in guardrails (comparison)
 
 `Off` · `Basic` (regex filter + output secret redaction) · `LLM judge` (the
-same model classifies each prompt) · `TrendAI Vision One AI Guard` (prompts
-and responses, API key required; fails open when unreachable, and the log says so).
+same model classifies each prompt). These stack with TrendAI protection.
 
 ## LLM backend
 
@@ -111,4 +159,4 @@ app recovers it.
    Add `http://host:8090` as a web target so Web App AI-endpoint discovery runs too.
 3. Run the AI Security Suite and watch **Live activity**.
 4. Compare the report with **Challenges & answer key**.
-5. Apply **Hardened** or a guardrail, **Reset data & log**, then run it again.
+5. Click **Protect with TrendAI** (or **Hardened code**), **Reset data & log**, then run it again.

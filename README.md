@@ -143,7 +143,7 @@ path, only after logging in.
 | **AI Scanner** | `ai-scanner` + `ollama` | `/aiscanner` | Use case: red-team a local LLM — real adversarial prompts against a real Ollama model, findings mapped to the OWASP Top 10 for LLM Applications |
 | **Smish Detector** | `smish` | `/smish` | Smishing (SMS phishing) awareness demo (under **Other**) |
 | **Vision One Chatbot** | `v1-chatbot` | `/v1chat` | Chat front-end driving the real Vision One MCP server |
-| **AI Target Range** | `ai-target` + `ollama` | `/aitarget` (control) · `:8090` (target, **no login**) | Use case: realistic, deliberately vulnerable AI assistants for a bank and a hospital, built for AI red-team tools such as Vantyr. 17 switchable weaknesses with an answer key and live hit log |
+| **AI Target Range** | `ai-target` + `ollama` | `/aitarget` (control) · `:8090` (target, **no login**) | Use case: realistic, deliberately vulnerable AI assistants for a bank and a hospital, built for AI red-team tools such as Vantyr. 18 switchable weaknesses with an answer key and live hit log, protectable with AI Guard + File Security |
 | **Agentic SIEM Sizing Calculator** | `siem-calc` | `/siemcalc` | Credit-sizing wizard for Vision One Agentic SIEM (under **Business Tools**) |
 
 Each demo's live "how to run it" script is shown directly on its card in the portal.
