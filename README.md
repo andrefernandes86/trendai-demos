@@ -128,7 +128,9 @@ restarts.
 
 ## What's included
 
-Only the portal is published on the host (`8088`). Each demo runs in its own
+Only the portal is published on the host (`8088`). The one deliberate exception
+is the AI Target Range's vulnerable app on `8090`, published without login so a
+red-team tool can attack it. Keep it on a lab network (see `AI_TARGET_BIND`). Each demo runs in its own
 container on the internal network and is reached **through** the portal, under a
 path, only after logging in.
 
@@ -140,6 +142,8 @@ path, only after logging in.
 | **Server & Workload Protection** | `workload-protection` | `/workload` | Use case: agent-based workload defense — Anti-Malware, Web Reputation, Host IPS, Integrity Monitoring, Log Inspection each catch a stage of a simulated attack |
 | **AI Scanner** | `ai-scanner` + `ollama` | `/aiscanner` | Use case: red-team a local LLM — real adversarial prompts against a real Ollama model, findings mapped to the OWASP Top 10 for LLM Applications |
 | **Smish Detector** | `smish` | `/smish` | Smishing (SMS phishing) awareness demo (under **Other**) |
+| **Vision One Chatbot** | `v1-chatbot` | `/v1chat` | Chat front-end driving the real Vision One MCP server |
+| **AI Target Range** | `ai-target` + `ollama` | `/aitarget` (control) · `:8090` (target, **no login**) | Use case: realistic, deliberately vulnerable AI assistants for a bank and a hospital, built for AI red-team tools such as Vantyr. 18 switchable weaknesses with an answer key and live hit log, protectable with AI Guard + File Security |
 | **Agentic SIEM Sizing Calculator** | `siem-calc` | `/siemcalc` | Credit-sizing wizard for Vision One Agentic SIEM (under **Business Tools**) |
 
 Each demo's live "how to run it" script is shown directly on its card in the portal.
@@ -169,6 +173,10 @@ inert until configured.
   One **AI Guard** and **File Security** API keys in Settings to enable
   detection. Override the model with `OLLAMA_MODEL` (e.g. `llama3.2:1b` for a
   faster CPU response) in `.env`.
+- **AI Target Range**: uses the bundled Ollama with `qwen2.5:3b` (tool calling
+  is required). For realistic agent behaviour, point it at a bigger Ollama or a
+  vLLM server (`AI_TARGET_LLM_URL`, `AI_TARGET_MODEL` in `.env`, or the control
+  panel). See `tools/ai-target/README.md`.
 - **Smish Detector** — none. Report password defaults to `sms`
   (`REPORT_PASSWORD` in `.env`). Educational use, controlled environments only.
 
@@ -217,6 +225,8 @@ trendai-demo/
     ├── app-sec-file-sec/      #   AI Guard & File Security chatbot (FastAPI + Ollama)
     ├── workload-protection/   #   Server & Workload Protection demo (FastAPI)
     ├── ai-scanner/            #   AI Scanner — LLM red-teaming demo (FastAPI + Ollama)
+    ├── v1-chatbot/            #   Vision One Chatbot over the real MCP server (FastAPI + Go)
+    ├── ai-target/             #   AI Target Range — vulnerable bank + hospital AI apps (FastAPI)
     ├── sms-dl/                #   Smish Detector (Flask)
     └── siem-calculator/       #   Agentic SIEM Sizing Calculator (nginx SPA)
 ```

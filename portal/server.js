@@ -37,6 +37,7 @@ const DEMOS = {
   workload:  { target: 'http://workload-protection:8000', secure: true },
   aiscanner: { target: 'http://ai-scanner:8000',          secure: true },
   v1chat:    { target: 'http://v1-chatbot:8000',          secure: true },
+  aitarget:  { target: 'http://ai-target:8000',           secure: true },
 };
 
 // ---------------------------------------------------------------------------

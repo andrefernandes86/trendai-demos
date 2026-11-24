@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Customer Assistant</title>
+<script src="../config.js"></script>
+<style>
+  :root {
+    --brand: #0f4c81; --accent: #16a34a;
+    --bg: #f4f6f9; --panel: #ffffff; --ink: #142033; --muted: #5b6b80; --line: #e2e8f0;
+    --bubble-me: var(--brand); --bubble-bot: #ffffff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif;
+         background: var(--bg); color: var(--ink); height: 100vh; display: flex; overflow: hidden; }
+  /* ---- side menu ---- */
+  aside { width: 260px; flex-shrink: 0; background: #0d1726; color: #cbd5e1; display: flex; flex-direction: column; }
+  aside .head { padding: 18px 18px 10px; font-size: 11px; letter-spacing: .8px; text-transform: uppercase; color: #64748b; }
+  .biz { margin: 2px 10px; border-radius: 10px; }
+  .biz > button { width: 100%; display: flex; gap: 10px; align-items: center; padding: 10px; background: none; border: 0;
+                  color: inherit; font: inherit; cursor: pointer; border-radius: 10px; text-align: left; }
+  .biz > button:hover { background: rgba(255,255,255,.05); }
+  .biz.active > button { background: rgba(255,255,255,.08); color: #fff; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center; flex-shrink: 0; color: #fff; }
+  .biz .name { font-weight: 600; font-size: 14px; }
+  .biz .sub { font-size: 11.5px; color: #8193ab; }
+  .sub-items { display: none; padding: 4px 0 8px 54px; }
+  .biz.active .sub-items { display: block; }
+  .sub-items a { display: block; padding: 7px 10px; font-size: 13px; color: #a8b6c9; text-decoration: none; border-radius: 7px; cursor: pointer; }
+  .sub-items a:hover { color: #fff; }
+  .sub-items a.on { color: #fff; background: rgba(255,255,255,.07); }
+  aside .foot { margin-top: auto; padding: 14px 18px; font-size: 11px; color: #64748b; border-top: 1px solid #1c2a3f; line-height: 1.5; }
+  /* ---- main ---- */
+  main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  header { background: var(--panel); border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 14px; }
+  header .logo { width: 38px; height: 38px; background: var(--brand); }
+  header h1 { font-size: 17px; }
+  header .tag { font-size: 12px; color: var(--muted); }
+  header .user { margin-left: auto; text-align: right; font-size: 12.5px; color: var(--muted); }
+  header .user b { color: var(--ink); display: block; font-size: 13.5px; }
+  .view { flex: 1; display: none; min-height: 0; }
+  .view.on { display: flex; }
+  /* chat */
+  #chatView { flex-direction: column; }
+  #log { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 14px; }
+  .msg { max-width: 760px; display: flex; gap: 10px; }
+  .msg.me { align-self: flex-end; flex-direction: row-reverse; }
+  .avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--brand); color: #fff; display: grid; place-items: center;
+            font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .msg.me .avatar { background: #64748b; }
+  .bubble { background: var(--bubble-bot); border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px; font-size: 14.5px;
+            line-height: 1.55; white-space: pre-wrap; word-wrap: break-word; min-width: 0; }
+  .msg.me .bubble { background: var(--bubble-me); color: #fff; border-color: transparent; }
+  .bubble.blocked { border-color: #f59e0b; background: #fffbeb; }
+  .meta { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { font-size: 11.5px; padding: 3px 8px; border-radius: 999px; background: #eef2f7; color: var(--muted); border: 1px solid var(--line); }
+  details.tools { margin-top: 6px; font-size: 12.5px; color: var(--muted); }
+  details.tools summary { cursor: pointer; }
+  details.tools pre { background: #0f172a; color: #e2e8f0; padding: 10px; border-radius: 8px; overflow-x: auto; margin-top: 6px;
+                      font-size: 11.5px; white-space: pre-wrap; max-height: 260px; }
+  .welcome { max-width: 640px; margin: 20px auto 0; text-align: center; }
+  .welcome h2 { font-size: 22px; margin-bottom: 6px; }
+  .welcome p { color: var(--muted); font-size: 14px; }
+  .sugg { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 22px; text-align: left; }
+  .sugg button { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font: inherit;
+                 font-size: 13.5px; color: var(--ink); cursor: pointer; }
+  .sugg button:hover { border-color: var(--brand); }
+  form#composer { display: flex; gap: 10px; padding: 14px 24px 18px; background: var(--panel); border-top: 1px solid var(--line); }
+  #input { flex: 1; min-width: 0; resize: none; border: 1px solid var(--line); border-radius: 12px; padding: 11px 14px; font: inherit; font-size: 14.5px;
+           max-height: 160px; outline: none; }
+  #input:focus { border-color: var(--brand); }
+  #send { background: var(--brand); color: #fff; border: 0; border-radius: 12px; padding: 0 20px; font-weight: 600; cursor: pointer; }
+  #send:disabled { opacity: .5; cursor: default; }
+  .typing { color: var(--muted); font-size: 13px; padding-left: 40px; }
+  #attachBtn { background: none; border: 1px solid var(--line); border-radius: 12px; width: 46px; font-size: 18px; cursor: pointer; color: var(--muted); }
+  #attachBtn:hover { border-color: var(--brand); color: var(--brand); }
+  #pending { display: none; flex-wrap: wrap; gap: 8px; padding: 10px 24px 0; background: var(--panel); border-top: 1px solid var(--line); }
+  #pending.on { display: flex; }
+  .att { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 5px 10px; border-radius: 10px; border: 1px solid var(--line); background: #f8fafc; max-width: 100%; }
+  .att.ok { border-color: #86efac; background: #f0fdf4; }
+  .att.bad { border-color: #fca5a5; background: #fef2f2; color: #991b1b; }
+  .att.busy { color: var(--muted); }
+  .att button { background: none; border: 0; cursor: pointer; color: var(--muted); font-size: 14px; }
+  .att .why { font-size: 11.5px; }
+  .shield { font-size: 11px; padding: 3px 8px; border-radius: 999px; border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+  .shield.bad { border-color: #fecaca; background: #fef2f2; color: #991b1b; }
+  .shield.warn { border-color: #fde68a; background: #fffbeb; color: #92400e; }
+  /* knowledge center */
+  #kbView { overflow-y: auto; padding: 24px; flex-direction: column; gap: 16px; }
+  #kbView h2 { font-size: 18px; }
+  .kbgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .card h3 { font-size: 14.5px; margin-bottom: 6px; }
+  .card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .card .badge { display: inline-block; font-size: 10.5px; padding: 2px 7px; border-radius: 999px; background: #fef3c7; color: #92400e; margin-bottom: 6px; }
+  .editor input, .editor textarea { width: 100%; border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; font: inherit;
+                                    font-size: 13.5px; margin-top: 8px; }
+  .editor button { margin-top: 10px; background: var(--brand); color: #fff; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600; cursor: pointer; }
+  .editor .note { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  @media (max-width: 760px) {
+    aside { position: fixed; z-index: 5; height: 100%; transform: translateX(-100%); transition: transform .2s; }
+    aside.open { transform: none; }
+    #menuBtn { display: inline-block !important; }
+    .sugg { grid-template-columns: 1fr; }
+    header .user { display: none; }
+    #log, form#composer, #kbView { padding-left: 16px; padding-right: 16px; }
+  }
+  #menuBtn { display: none; background: none; border: 0; font-size: 22px; cursor: pointer; color: var(--ink); }
+</style>
+</head>
+<body>
+<aside id="side">
+  <div class="head">Our companies</div>
+  <div id="bizList"></div>
+  <div class="foot">Fictional companies · synthetic data.<br>AI assistant powered by a self-hosted model.</div>
+</aside>
+<main>
+  <header>
+    <button id="menuBtn" aria-label="Menu">☰</button>
+    <div class="logo" id="hLogo"></div>
+    <div><h1 id="hName"></h1><div class="tag" id="hTag"></div></div>
+    <div class="user">Signed in as<b id="hUser"></b><span id="hSeg"></span></div>
+  </header>
+  <section class="view on" id="chatView">
+    <div id="log"></div>
+    <div id="pending"></div>
+    <form id="composer">
+      <button type="button" id="attachBtn" title="Attach a document">📎</button>
+      <input type="file" id="fileIn" hidden multiple>
+      <textarea id="input" rows="1" placeholder="Message the assistant…"></textarea>
+      <button id="send" type="submit">Send</button>
+    </form>
+  </section>
+  <section class="view" id="kbView"></section>
+</main>
+<script>
+(() => {
+  const CFG = window.APP_CONFIG || { tenants: {}, endpoints: {} };
+  // Works at "/" (public target), "/app/" and behind the portal at "/aitarget/app/".
+  const BASE = location.pathname.replace(/\/app\/?$/, '').replace(/\/$/, '');
+  const ICONS = {
+    finance: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg>',
+    healthcare: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-4.4-9.3-9A5.3 5.3 0 0 1 12 6.6 5.3 5.3 0 0 1 21.3 12C19 16.6 12 21 12 21z"/><path d="M12 10v5M9.5 12.5h5"/></svg>',
+  };
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const store = { get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+                  set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} } };
+
+  let tid = (location.hash.slice(1) in CFG.tenants) ? location.hash.slice(1) : (store.get('aitr.tenant') || 'finance');
+  if (!(tid in CFG.tenants)) tid = Object.keys(CFG.tenants)[0];
+  let view = 'chat';
+  const sessions = {};
+  const transcripts = {};
+  const pending = {};   // tenant -> [{name, status: busy|ok|bad, id, reason, protection}]
+  const ENGINE = { ai_guard: 'AI Guard', file_security: 'File Security' };
+
+  function renderSide() {
+    $('bizList').innerHTML = Object.entries(CFG.tenants).map(([id, t]) => `
+      <div class="biz ${id === tid ? 'active' : ''}">
+        <button data-t="${id}"><span class="logo" style="background:${t.color}">${ICONS[id] || ''}</span>
+          <span><span class="name">${esc(t.company)}</span><br><span class="sub">${esc(t.tagline)}</span></span></button>
+        <div class="sub-items">
+          <a data-v="chat" class="${id === tid && view === 'chat' ? 'on' : ''}">Ask ${esc(t.assistant)}</a>
+          <a data-v="kb" class="${id === tid && view === 'kb' ? 'on' : ''}">Knowledge Center</a>
+        </div>
+      </div>`).join('');
+    $('bizList').querySelectorAll('button[data-t]').forEach((b) => b.onclick = () => select(b.dataset.t, 'chat'));
+    $('bizList').querySelectorAll('a[data-v]').forEach((a) => a.onclick = () => select(tid, a.dataset.v));
+  }
+
+  function select(t, v) {
+    tid = t; view = v; store.set('aitr.tenant', t);
+    history.replaceState(null, '', '#' + t);
+    const T = CFG.tenants[t];
+    document.documentElement.style.setProperty('--brand', T.color);
+    document.documentElement.style.setProperty('--accent', T.accent);
+    document.title = `${T.company} — ${T.tagline}`;
+    $('hLogo').innerHTML = ICONS[t] || '';
+    $('hName').textContent = T.company;
+    $('hTag').textContent = `${T.tagline} · ${T.assistant}, your AI assistant`;
+    $('hUser').textContent = T.user.name;
+    $('hSeg').textContent = `${T.user.id} · ${T.user.segment}`;
+    $('input').placeholder = `Message ${T.assistant}…`;
+    $('chatView').classList.toggle('on', v === 'chat');
+    $('kbView').classList.toggle('on', v === 'kb');
+    $('side').classList.remove('open');
+    renderSide();
+    renderPending();
+    if (v === 'chat') renderLog(); else renderKb();
+  }
+
+  // Model output: rendered as HTML when the app is in its (vulnerable) default
+  // mode — exactly the "improper output handling" weakness C16. Escaped otherwise.
+  function fmt(text) {
+    let s = CFG.renderHtml ? String(text) : esc(text);
+    s = s.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    return s;
+  }
+
+  function shields(list) {
+    return (list || []).map((c) => {
+      const cls = c.verdict === 'block' ? 'bad' : (c.verdict === 'allow' ? '' : 'warn');
+      const mark = c.verdict === 'block' ? '✕ blocked' : (c.verdict === 'allow' ? '✓' : '⚠ ' + c.verdict);
+      const chunks = c.chunks > 1 ? ` · ${c.chunks} chunks` : '';
+      return `<span class="shield ${cls}" title="${esc(c.reason || '')}">🛡 ${ENGINE[c.engine] || c.engine} · ${esc(c.stage)} ${mark}${chunks}</span>`;
+    }).join('');
+  }
+
+  function renderPending() {
+    const list = pending[tid] || [];
+    $('pending').classList.toggle('on', list.length > 0);
+    $('pending').innerHTML = list.map((a, i) => `<span class="att ${a.status}">📎 ${esc(a.name)}
+      ${a.status === 'busy' ? '<span class="why">scanning…</span>' : ''}
+      ${a.status === 'ok' ? `<span class="why">${(a.protection || []).length ? '🛡 clean' : 'attached'}</span>` : ''}
+      ${a.status === 'bad' ? `<span class="why">${esc(a.reason)}</span>` : ''}
+      <button data-i="${i}" title="Remove">×</button></span>`).join('');
+    $('pending').querySelectorAll('button[data-i]').forEach((b) => b.onclick = () => { list.splice(+b.dataset.i, 1); renderPending(); });
+  }
+
+  async function uploadFile(file, purpose, title) {
+    const fd = new FormData();
+    fd.append('file', file); fd.append('purpose', purpose);
+    if (title) fd.append('title', title);
+    const r = await fetch(`${BASE}/${tid}/api/files`, { method: 'POST', body: fd });
+    const d = await r.json().catch(() => ({}));
+    return { ok: r.ok && d.accepted, status: r.status, d };
+  }
+
+  async function attach(files) {
+    const t = tid;
+    const list = pending[t] = pending[t] || [];
+    for (const file of files) {
+      const item = { name: file.name, status: 'busy' };
+      list.push(item); renderPending();
+      try {
+        const { ok, d } = await uploadFile(file, 'chat');
+        if (ok) Object.assign(item, { status: 'ok', id: d.file_id, protection: d.protection });
+        else Object.assign(item, { status: 'bad', reason: d.reason || d.detail || 'Upload rejected', protection: d.protection });
+      } catch (e) { Object.assign(item, { status: 'bad', reason: e.message }); }
+      if (t === tid) renderPending();
+    }
+  }
+
+  function renderLog() {
+    const T = CFG.tenants[tid];
+    const items = transcripts[tid] || [];
+    if (!items.length) {
+      $('log').innerHTML = `<div class="welcome"><h2>Hi ${esc(T.user.name.split(' ')[0])}, I'm ${esc(T.assistant)}.</h2>
+        <p>Your ${esc(T.company)} assistant. Ask me about your ${T.subject === 'patient' ? 'appointments, results and prescriptions' : 'accounts, cards, transfers and loans'}.</p>
+        <div class="sugg">${T.suggestions.map((s) => `<button>${esc(s)}</button>`).join('')}</div></div>`;
+      $('log').querySelectorAll('.sugg button').forEach((b) => b.onclick = () => send(b.textContent));
+      return;
+    }
+    $('log').innerHTML = items.map((m) => msgHtml(m)).join('');
+    $('log').scrollTop = $('log').scrollHeight;
+  }
+
+  function msgHtml(m) {
+    const T = CFG.tenants[tid];
+    if (m.role === 'user') return `<div class="msg me"><div class="avatar">${esc(T.user.name[0])}</div><div class="bubble">${esc(m.content)}${(m.files || []).map((f) => `\n📎 ${esc(f)}`).join('')}</div></div>`;
+    if (m.role === 'typing') return `<div class="typing">${esc(T.assistant)} is typing…</div>`;
+    const tools = (m.tools || []);
+    const meta = [];
+    (m.sources || []).filter((s) => !s.attachment).forEach((s) => meta.push(`<span class="chip">📄 ${esc(s.title)}</span>`));
+    if (m.protection && m.protection.length) meta.push(shields(m.protection));
+    const toolHtml = tools.length ? `<details class="tools"><summary>${esc(T.assistant)} used ${tools.length} tool${tools.length > 1 ? 's' : ''}: ${tools.map((x) => esc(x.name)).join(', ')}</summary>
+      <pre>${esc(tools.map((x) => `${x.name}(${JSON.stringify(x.args)})\n→ ${JSON.stringify(x.result, null, 1).slice(0, 1500)}`).join('\n\n'))}</pre></details>` : '';
+    return `<div class="msg"><div class="avatar">${esc(T.assistant[0])}</div><div style="min-width:0">
+      <div class="bubble ${m.blocked ? 'blocked' : ''} ${m.error ? 'blocked' : ''}">${m.error ? esc(m.content) : fmt(m.content)}</div>
+      ${meta.length ? `<div class="meta">${meta.join('')}</div>` : ''}${toolHtml}</div></div>`;
+  }
+
+  async function send(text) {
+    text = (text || '').trim();
+    if (!text) return;
+    const t = tid;
+    const list = transcripts[t] = transcripts[t] || [];
+    const ready = (pending[t] || []).filter((a) => a.status === 'ok');
+    if ((pending[t] || []).some((a) => a.status === 'busy')) { alert('Please wait for the attachment scan to finish.'); return; }
+    pending[t] = [];
+    renderPending();
+    list.push({ role: 'user', content: text, files: ready.map((a) => a.name) });
+    list.push({ role: 'typing' });
+    renderLog();
+    $('send').disabled = true;
+    try {
+      const r = await fetch(`${BASE}/${t}/chat`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text, session_id: sessions[t] || null, attachments: ready.map((a) => a.id) }) });
+      const d = await r.json().catch(() => ({}));
+      list.pop();
+      if (!r.ok) list.push({ role: 'assistant', error: true, content: d.detail || `Error ${r.status}` });
+      else {
+        sessions[t] = d.session_id;
+        list.push({ role: 'assistant', content: d.completion, tools: d.tool_calls, sources: d.sources, blocked: d.blocked, protection: d.protection });
+      }
+    } catch (e) {
+      list.pop();
+      list.push({ role: 'assistant', error: true, content: 'Network error: ' + e.message });
+    }
+    $('send').disabled = false;
+    if (t === tid && view === 'chat') renderLog();
+  }
+
+  async function renderKb() {
+    const T = CFG.tenants[tid];
+    $('kbView').innerHTML = `<h2>${esc(T.company)} Knowledge Center</h2><div class="kbgrid" id="kbGrid">Loading…</div>
+      <div class="card editor"><h3>Publish an article</h3>
+        <p>Help-center editors can publish articles; ${esc(T.assistant)} uses them to answer questions.</p>
+        <input id="kbTitle" placeholder="Article title">
+        <textarea id="kbBody" rows="5" placeholder="Article content, or upload a document below"></textarea>
+        <input type="file" id="kbFile" accept=".txt,.md,.csv,.json,.html,.pdf,.docx">
+        <button id="kbPub">Publish</button><div class="note" id="kbNote"></div></div>`;
+    $('kbPub').onclick = async () => {
+      $('kbNote').textContent = 'Publishing…';
+      const file = $('kbFile').files[0];
+      let ok, d, status;
+      if (file) ({ ok, d, status } = await uploadFile(file, 'kb', $('kbTitle').value));
+      else {
+        const r = await fetch(`${BASE}/${tid}/api/kb`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: $('kbTitle').value, content: $('kbBody').value }) });
+        d = await r.json().catch(() => ({})); ok = r.ok; status = r.status;
+      }
+      $('kbNote').innerHTML = (ok ? 'Published. ' : esc(d.reason || d.detail || `Error ${status}`) + ' ') + shields(d.protection);
+      if (ok) setTimeout(renderKb, 1200);
+    };
+    try {
+      const d = await (await fetch(`${BASE}/${tid}/api/kb`)).json();
+      $('kbGrid').innerHTML = d.documents.map((x) => `<div class="card">${x.uploaded ? '<span class="badge">Community</span>' : ''}
+        <h3>${esc(x.title)}</h3><p>${esc(x.excerpt)}…</p></div>`).join('');
+    } catch (e) { $('kbGrid').textContent = 'Could not load articles.'; }
+  }
+
+  $('composer').onsubmit = (e) => { e.preventDefault(); const v = $('input').value; $('input').value = ''; send(v); };
+  $('input').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('composer').requestSubmit(); } });
+  $('menuBtn').onclick = () => $('side').classList.toggle('open');
+  $('attachBtn').onclick = () => $('fileIn').click();
+  $('fileIn').onchange = () => { const f = [...$('fileIn').files]; $('fileIn').value = ''; attach(f); };
+  if (CFG.uploads && CFG.uploads.accept) $('fileIn').accept = CFG.uploads.accept;
+  select(tid, 'chat');
+})();
+</script>
+</body>
+</html>

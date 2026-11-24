@@ -14,6 +14,12 @@
 #   http://<host>:8088/workload  Server & Workload Protection (auth required)
 #   http://<host>:8088/aiscanner AI Scanner                   (auth required)
 #   http://<host>:8088/v1chat    Vision One Chatbot            (auth required)
+#   http://<host>:8088/aitarget  AI Target Range control panel (auth required)
+#
+# ONE deliberate exception: the AI Target Range also publishes its vulnerable
+# target app on :8090 WITHOUT login, so AI red-team tools (e.g. Vantyr) can
+# attack it. Keep that port on a lab network — never route it through the
+# public tunnel. Bind it to one interface with AI_TARGET_BIND (e.g. 192.168.1.20).
 #
 # The demo containers are NOT published on the host — they are only reachable
 # on the internal compose network via the authenticated portal.
@@ -42,6 +48,7 @@ services:
       - workload-protection
       - ai-scanner
       - v1-chatbot
+      - ai-target
     restart: unless-stopped
 
   # --- V1 File Security Scanner (Go) — internal only ----------------------
@@ -82,7 +89,7 @@ services:
     container_name: trendai-ollama
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
-      OLLAMA_EXTRA_MODELS: "${OLLAMA_EXTRA_MODELS:-llama3.2:1b phi3:mini}"
+      OLLAMA_EXTRA_MODELS: "${OLLAMA_EXTRA_MODELS:-llama3.2:1b phi3:mini qwen2.5:3b}"
       OLLAMA_KEEP_ALIVE: "10m"
     entrypoint:
       - /bin/sh
@@ -139,6 +146,34 @@ services:
     build:
       context: ./tools/v1-chatbot
     container_name: trendai-v1-chatbot
+    depends_on:
+      - ollama
+    restart: unless-stopped
+
+  # --- AI Target Range (FastAPI) -----------------------------------------
+  # Deliberately vulnerable AI apps (Northbridge Bank + Meridian Health) for
+  # AI red-team testing. :8000 = control panel, proxied by the portal at
+  # /aitarget (login required). :8090 = the PUBLIC target, no login, published
+  # on the host for the red-team tool. LLM: bundled Ollama by default; point
+  # AI_TARGET_LLM_URL at a vLLM / larger Ollama server for better results.
+  ai-target:
+    build:
+      context: ./tools/ai-target
+    container_name: trendai-ai-target
+    ports:
+      - "${AI_TARGET_BIND:-0.0.0.0}:${AI_TARGET_PORT:-8090}:8090"
+    environment:
+      LLM_PROVIDER: ${AI_TARGET_LLM_PROVIDER:-ollama}
+      LLM_BASE_URL: ${AI_TARGET_LLM_URL:-http://ollama:11434}
+      LLM_MODEL: ${AI_TARGET_MODEL:-qwen2.5:3b}
+      LLM_API_KEY: ${AI_TARGET_LLM_API_KEY:-}
+      PUBLIC_BASE_URL: ${AI_TARGET_PUBLIC_URL:-}
+      # TrendAI Vision One protection (optional here; also settable in the
+      # control panel). A key present at start-up switches that engine on.
+      V1_AI_GUARD_API_KEY: ${V1_AI_GUARD_API_KEY:-}
+      V1_AI_GUARD_REGION: ${V1_AI_GUARD_REGION:-us}
+      V1FS_API_KEY: ${V1FS_API_KEY:-}
+      V1FS_REGION: ${V1FS_REGION:-us-east-1}
     depends_on:
       - ollama
     restart: unless-stopped
