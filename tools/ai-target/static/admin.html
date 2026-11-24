@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Target Range</title>
+<style>
+  :root { --bg: #12121f; --bg2: #1c1c30; --bg3: #26263d; --line: #34344f; --text: #e6e6f0; --muted: #9a9ab5;
+          --red: #d71921; --green: #22c55e; --amber: #f59e0b; --blue: #60a5fa; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif; background: var(--bg);
+         color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
+  code, pre, .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  aside { width: 230px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--line); padding: 18px 12px;
+          position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
+  .brand { padding: 0 8px 16px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+  .brand b { display: block; font-size: 15px; }
+  .brand span { font-size: 11.5px; color: var(--muted); }
+  .brand .pill { display: inline-block; margin-top: 6px; font-size: 10px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase;
+                 color: var(--red); background: rgba(215,25,33,.14); border: 1px solid rgba(215,25,33,.4); padding: 2px 7px; border-radius: 999px; }
+  nav a { display: flex; justify-content: space-between; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none;
+          cursor: pointer; margin-bottom: 2px; }
+  nav a:hover { color: var(--text); background: var(--bg3); }
+  nav a.on { color: #fff; background: var(--bg3); box-shadow: inset 3px 0 0 var(--red); }
+  nav .count { font-size: 11px; color: var(--muted); }
+  aside .open { margin-top: auto; display: block; text-align: center; background: var(--red); color: #fff; text-decoration: none;
+                padding: 10px; border-radius: 8px; font-weight: 600; }
+  main { flex: 1; padding: 26px 30px 60px; min-width: 0; max-width: 1200px; }
+  section { display: none; }
+  section.on { display: block; }
+  h1 { font-size: 20px; margin-bottom: 4px; }
+  .lead { color: var(--muted); margin-bottom: 20px; line-height: 1.5; max-width: 820px; }
+  .card { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 16px; }
+  .card h2 { font-size: 14.5px; margin-bottom: 4px; }
+  .card .sub { color: var(--muted); font-size: 12.5px; margin-bottom: 12px; line-height: 1.5; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--bg2); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat .k { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; }
+  .stat .v { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat .v small { font-size: 12px; color: var(--muted); font-weight: 400; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  input[type=text], input[type=password], input[type=number], select, textarea {
+    width: 100%; background: var(--bg3); border: 1px solid var(--line); color: var(--text); border-radius: 8px; padding: 9px 11px; font: inherit; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+  button { background: var(--bg3); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font: inherit;
+           font-weight: 600; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  .msg { font-size: 12.5px; margin-top: 10px; color: var(--muted); }
+  .ok { color: var(--green); } .bad { color: #f87171; } .warn { color: var(--amber); }
+  pre.code { background: #0c0c16; border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px;
+             line-height: 1.5; white-space: pre; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .5px; color: var(--muted); padding: 8px; border-bottom: 1px solid var(--line); }
+  td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: top; line-height: 1.45; }
+  td .t { font-weight: 600; }
+  td .d { color: var(--muted); font-size: 12.5px; margin-top: 3px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 6px; background: var(--bg3); border: 1px solid var(--line);
+         color: var(--muted); margin: 0 4px 4px 0; white-space: nowrap; }
+  .hit { background: rgba(215,25,33,.16); border-color: rgba(215,25,33,.5); color: #fca5a5; }
+  .switch { position: relative; width: 38px; height: 22px; display: inline-block; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch span { position: absolute; inset: 0; background: #3b3b55; border-radius: 22px; cursor: pointer; transition: .15s; }
+  .switch span:before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
+  .switch input:checked + span { background: var(--red); }
+  .switch input:checked + span:before { transform: translateX(16px); }
+  .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+  .mode { border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; background: var(--bg3); }
+  .mode.on { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+  .mode b { display: block; margin-bottom: 4px; }
+  .mode span { font-size: 12px; color: var(--muted); line-height: 1.45; }
+  .ev { border-bottom: 1px solid var(--line); padding: 10px 0; }
+  .ev .top { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .ev .io { margin-top: 6px; font-size: 12.5px; line-height: 1.5; word-break: break-word; }
+  .ev .io b { color: var(--muted); font-weight: 600; }
+  @media (max-width: 800px) {
+    body { flex-direction: column; }
+    aside { position: static; width: 100%; height: auto; }
+    main { padding: 18px 16px 40px; }
+    .row { grid-template-columns: 1fr; }
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand"><b>AI Target Range</b><span>Vulnerable AI apps for red-team testing</span><br><span class="pill">Lab use only</span></div>
+  <nav id="nav">
+    <a data-s="overview" class="on">Overview</a>
+    <a data-s="challenges">Challenges <span class="count" id="navCh"></span></a>
+    <a data-s="activity">Live activity <span class="count" id="navEv"></span></a>
+    <a data-s="guardrails">Guardrails</a>
+    <a data-s="llm">LLM backend</a>
+    <a data-s="prompts">System prompts</a>
+  </nav>
+  <a class="open" href="app/" target="_blank" rel="noopener">Open the app ↗</a>
+</aside>
+<main>
+  <!-- ============ OVERVIEW ============ -->
+  <section id="s-overview" class="on">
+    <h1>Overview</h1>
+    <p class="lead">Two realistic AI assistants share one deliberately vulnerable architecture: <b>Northbridge Bank</b> (Nora, retail banking)
+      and <b>Meridian Health</b> (Clara, patient portal). Point Vantyr at the public target, run a mission, then compare its findings with
+      the answer key and the live hit log. Turn on hardening and guardrails, then run it again to show the difference.</p>
+    <div class="stats">
+      <div class="stat"><div class="k">Challenges enabled</div><div class="v" id="stCh">–</div></div>
+      <div class="stat"><div class="k">Challenges triggered</div><div class="v" id="stHit">–</div></div>
+      <div class="stat"><div class="k">Guardrail</div><div class="v" id="stGr">–</div></div>
+      <div class="stat"><div class="k">LLM</div><div class="v" id="stLlm" style="font-size:15px">–</div></div>
+    </div>
+    <div class="card">
+      <h2>Public target</h2>
+      <div class="sub">The target listens on its own port (<code>:8090</code>) with <b>no login</b> so a red-team tool can reach it. Expose it on a lab network only, never through the public tunnel.
+        Set the address Vantyr (or its on-prem runner) will use.</div>
+      <label>Target base URL</label>
+      <input type="text" id="pubUrl" placeholder="http://192.168.1.x:8090">
+      <div class="btns"><button id="savePub">Save</button></div>
+    </div>
+    <div class="card">
+      <h2>Vantyr scope — <code>ai_endpoints</code></h2>
+      <div class="sub">Paste into the mission scope. Covers chat in OpenAI, Ollama and raw formats plus both MCP servers. The AI Supply Chain agent probes the same
+        host and port for the exposed model server, vector DB and leaked key. Add <code>http://host:8090</code> as a web target too, so Web App discovery finds the AI endpoints on its own.</div>
+      <pre class="code" id="scope"></pre>
+      <div class="btns"><button id="copyScope">Copy JSON</button></div>
+    </div>
+    <div class="card">
+      <h2>Presets</h2>
+      <div class="sub">Vulnerable = every challenge on, guardrail off (baseline run). Hardened = every challenge off (re-test run). Reset data restores balances,
+        prescriptions and the knowledge base and clears the log.</div>
+      <div class="btns">
+        <button class="primary" id="pVuln">All vulnerable</button>
+        <button id="pHard">Hardened</button>
+        <button id="pReset">Reset data &amp; log</button>
+      </div>
+      <div class="msg" id="presetMsg"></div>
+    </div>
+  </section>
+
+  <!-- ============ CHALLENGES ============ -->
+  <section id="s-challenges">
+    <h1>Challenges &amp; answer key</h1>
+    <p class="lead">The same 17 weaknesses exist in both businesses. Each one is mapped to OWASP LLM Top 10 (2025) and MITRE ATLAS, along with the Vantyr agent
+      expected to find it. Toggle a challenge off to apply its fix. <span class="tag hit">seen ×n</span> means the live log saw it exercised.</p>
+    <label style="max-width:280px">Show examples for<select id="tenSel"><option value="finance">Northbridge Bank (finance)</option><option value="healthcare">Meridian Health (healthcare)</option></select></label>
+    <div class="card" style="padding:6px 10px">
+      <table><thead><tr><th>On</th><th>Challenge</th><th class="hide-sm">Mapping</th><th>How it shows up</th></tr></thead><tbody id="chBody"></tbody></table>
+    </div>
+  </section>
+
+  <!-- ============ ACTIVITY ============ -->
+  <section id="s-activity">
+    <h1>Live activity</h1>
+    <p class="lead">Every chat turn, MCP call, knowledge-base upload and infrastructure probe hitting the target, tagged with the challenge it exercised.
+      This is the ground truth to compare against the red-team report.</p>
+    <div class="stats" id="actStats"></div>
+    <div class="card"><h2>State changes performed by the agents</h2><div class="sub">Transfers and refills actually executed against the in-memory core systems (challenge C06).</div>
+      <div id="actions" class="mono" style="font-size:12.5px"></div></div>
+    <div class="card"><h2>Event log</h2><div class="sub">Newest first · refreshes every 3 s.</div><div id="events"></div></div>
+  </section>
+
+  <!-- ============ GUARDRAILS ============ -->
+  <section id="s-guardrails">
+    <h1>Guardrails</h1>
+    <p class="lead">An input and output safety layer in front of both assistants. Run Vantyr's Guardrail Validation agent with each mode to compare block rates.</p>
+    <div class="card">
+      <div class="modes" id="modes">
+        <div class="mode" data-m="off"><b>Off</b><span>No filtering. Baseline.</span></div>
+        <div class="mode" data-m="basic"><b>Basic keyword filter</b><span>Regex for common injection and jailbreak phrases; redacts secret-shaped strings in output.</span></div>
+        <div class="mode" data-m="llm_judge"><b>LLM judge</b><span>The same local model classifies each prompt SAFE/UNSAFE before answering.</span></div>
+        <div class="mode" data-m="ai_guard"><b>TrendAI Vision One AI Guard</b><span>Prompts and responses checked by AI Guard. Needs an API key.</span></div>
+      </div>
+      <label style="margin-top:16px"><input type="checkbox" id="chkOut"> Also check model output</label>
+    </div>
+    <div class="card">
+      <h2>TrendAI Vision One AI Guard</h2>
+      <div class="sub">Kept in memory only. If AI Guard is unreachable, requests are allowed (fail-open) and the event log says so.</div>
+      <label>API key <span id="agSet" class="ok"></span></label><input type="password" id="agKey" placeholder="Leave blank to keep the current key">
+      <label>Endpoint</label><input type="text" id="agUrl">
+      <div class="btns"><button class="primary" id="saveGr">Save guardrails</button></div>
+      <div class="msg" id="grMsg"></div>
+    </div>
+  </section>
+
+  <!-- ============ LLM ============ -->
+  <section id="s-llm">
+    <h1>LLM backend</h1>
+    <p class="lead">Both assistants call one OpenAI-compatible chat endpoint with tool calling. Bundled Ollama, a vLLM server and any OpenAI-compatible gateway all work.
+      Use a model that supports tool calling: <code>qwen2.5:3b</code> is the smallest reliable one; <code>qwen2.5:7b</code> or <code>llama3.1:8b</code> work better.</p>
+    <div class="card">
+      <div class="row">
+        <div><label>Provider</label><select id="prov"><option value="ollama">Ollama</option><option value="vllm">vLLM</option><option value="openai">Other OpenAI-compatible</option></select></div>
+        <div><label>Temperature</label><input type="number" id="temp" min="0" max="2" step="0.1"></div>
+      </div>
+      <label>Base URL</label><input type="text" id="baseUrl" placeholder="http://ollama:11434  ·  http://vllm-host:8000/v1">
+      <label>Model</label><input type="text" id="model" list="modelList"><datalist id="modelList"></datalist>
+      <label>API key (optional) <span id="keySet" class="ok"></span></label><input type="password" id="apiKey" placeholder="Leave blank to keep the current key">
+      <div class="btns"><button class="primary" id="saveLlm">Save</button><button id="listModels">List models</button><button id="testLlm">Test</button></div>
+      <div class="msg" id="llmMsg"></div>
+    </div>
+  </section>
+
+  <!-- ============ PROMPTS ============ -->
+  <section id="s-prompts">
+    <h1>System prompts</h1>
+    <p class="lead">The prompt each assistant is using right now. It changes as you toggle challenges, so you can show the effect of a fix.</p>
+    <label style="max-width:280px">Assistant<select id="spSel"><option value="finance">Nora · Northbridge Bank</option><option value="healthcare">Clara · Meridian Health</option></select></label>
+    <pre class="code" id="sp" style="white-space:pre-wrap"></pre>
+  </section>
+</main>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // Works at "/" or "/admin" (direct) and at "/aitarget/" behind the portal.
+  const BASE = location.pathname.replace(/\/(admin\/?)?$/, '').replace(/\/$/, '');
+  const api = (p, opt) => fetch(BASE + p, opt).then(async (r) => { const d = await r.json().catch(() => ({})); if (!r.ok) throw new Error(d.detail || r.status); return d; });
+  const post = (p, body) => api(p, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+
+  let CFG = null, CH = [], HITS = {}, chTenant = 'finance', spTenant = 'finance';
+  const DEFAULT_URLS = { ollama: 'http://ollama:11434', vllm: 'http://vllm:8000/v1', openai: 'https://' };
+  const MODE_LABEL = { off: 'Off', basic: 'Basic', llm_judge: 'LLM judge', ai_guard: 'AI Guard' };
+
+  // ---- navigation (side menu only) ----
+  function show(s) {
+    document.querySelectorAll('nav a').forEach((a) => a.classList.toggle('on', a.dataset.s === s));
+    document.querySelectorAll('main section').forEach((x) => x.classList.toggle('on', x.id === 's-' + s));
+    try { localStorage.setItem('aitr.admin.s', s); } catch (_) {}
+    if (s === 'prompts') loadPrompt();
+  }
+  document.querySelectorAll('nav a').forEach((a) => a.onclick = () => show(a.dataset.s));
+
+  function pubBase() {
+    return (CFG.public_base_url || `${location.protocol === 'https:' ? 'http:' : location.protocol}//${location.hostname}:8090`).replace(/\/$/, '');
+  }
+
+  function renderAll() {
+    const en = Object.values(CFG.challenges).filter(Boolean).length;
+    $('stCh').innerHTML = `${en}<small> / ${CH.length}</small>`;
+    $('stGr').textContent = MODE_LABEL[CFG.guardrail.mode];
+    $('stLlm').textContent = `${CFG.llm.model} · ${CFG.llm.provider}`;
+    $('navCh').textContent = `${en}/${CH.length}`;
+    $('pubUrl').value = CFG.public_base_url || '';
+    $('pubUrl').placeholder = pubBase();
+    const b = pubBase(), model = CFG.llm.model;
+    const eps = [];
+    for (const t of ['finance', 'healthcare']) {
+      eps.push({ url: `${b}/${t}/v1`, api: 'openai', model: `${t}-copilot` });
+      eps.push({ url: `${b}/${t}`, api: 'ollama', model: `${t}-copilot` });
+      eps.push({ url: `${b}/${t}/chat`, api: 'raw' });
+      eps.push({ url: `${b}/${t}/mcp`, api: 'mcp', ...(CFG.challenges.C11 ? {} : { token: CFG.mcp_token }) });
+    }
+    let host = b; try { host = new URL(b).hostname; } catch (_) {}
+    $('scope').textContent = JSON.stringify({ authorized_targets: [host], ai_endpoints: eps }, null, 2);
+    // guardrails
+    document.querySelectorAll('.mode').forEach((m) => m.classList.toggle('on', m.dataset.m === CFG.guardrail.mode));
+    $('chkOut').checked = CFG.guardrail.check_output;
+    $('agUrl').value = CFG.guardrail.ai_guard_url;
+    $('agSet').textContent = CFG.guardrail.ai_guard_key_set ? `✓ set (${CFG.guardrail.ai_guard_key_masked})` : '';
+    // llm
+    $('prov').value = CFG.llm.provider; $('baseUrl').value = CFG.llm.base_url; $('model').value = CFG.llm.model;
+    $('temp').value = CFG.llm.temperature;
+    $('keySet').textContent = CFG.llm.api_key_set ? `✓ set (${CFG.llm.api_key_masked})` : '';
+    renderChallenges();
+  }
+
+  function renderChallenges() {
+    $('chBody').innerHTML = CH.map((c) => {
+      const n = HITS[c.id] || 0;
+      return `<tr><td><label class="switch"><input type="checkbox" data-c="${c.id}" ${CFG.challenges[c.id] ? 'checked' : ''}><span></span></label></td>
+        <td><div class="t">${c.id} · ${esc(c.title)} ${n ? `<span class="tag hit">seen ×${n}</span>` : ''}</div><div class="d">${esc(c.what)}</div>
+            <div class="d"><b>Fix:</b> ${esc(c.fix)}</div></td>
+        <td class="hide-sm"><span class="tag">${esc(c.owasp)}</span><span class="tag">${esc(c.atlas)}</span><div class="d">${esc(c.agent)}</div></td>
+        <td>${esc(c[chTenant])}</td></tr>`;
+    }).join('');
+    $('chBody').querySelectorAll('input[data-c]').forEach((i) => i.onchange = async () => {
+      CFG = await post('/admin/api/config', { challenges: { [i.dataset.c]: i.checked } });
+      renderAll();
+    });
+  }
+
+  $('tenSel').onchange = () => { chTenant = $('tenSel').value; renderChallenges(); };
+  $('spSel').onchange = () => { spTenant = $('spSel').value; loadPrompt(); };
+
+  async function loadPrompt() {
+    const r = await fetch(`${BASE}/admin/api/system-prompt/${spTenant}`);
+    $('sp').textContent = await r.text();
+  }
+
+  // ---- overview actions ----
+  $('savePub').onclick = async () => { CFG = await post('/admin/api/config', { public_base_url: $('pubUrl').value }); renderAll(); };
+  $('copyScope').onclick = () => navigator.clipboard?.writeText($('scope').textContent).then(() => { $('copyScope').textContent = 'Copied ✓'; setTimeout(() => $('copyScope').textContent = 'Copy JSON', 1500); });
+  const allCh = (v) => Object.fromEntries(CH.map((c) => [c.id, v]));
+  $('pVuln').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(true), guardrail: { mode: 'off' } }); renderAll(); $('presetMsg').textContent = 'All challenges enabled, guardrail off.'; };
+  $('pHard').onclick = async () => { CFG = await post('/admin/api/config', { challenges: allCh(false) }); renderAll(); $('presetMsg').textContent = 'All challenges disabled (hardened). Pick a guardrail mode under Guardrails too.'; };
+  $('pReset').onclick = async () => { await post('/admin/api/reset', {}); lastTs = 0; $('presetMsg').textContent = 'Data and log reset.'; poll(); };
+
+  // ---- guardrails ----
+  document.querySelectorAll('.mode').forEach((m) => m.onclick = () => { document.querySelectorAll('.mode').forEach((x) => x.classList.toggle('on', x === m)); });
+  $('saveGr').onclick = async () => {
+    const mode = document.querySelector('.mode.on')?.dataset.m || 'off';
+    const g = { mode, check_output: $('chkOut').checked, ai_guard_url: $('agUrl').value };
+    if ($('agKey').value) g.ai_guard_key = $('agKey').value;
+    try { CFG = await post('/admin/api/config', { guardrail: g }); $('agKey').value = ''; renderAll(); $('grMsg').innerHTML = '<span class="ok">Saved.</span>' + (mode === 'ai_guard' && !CFG.guardrail.ai_guard_key_set ? ' <span class="warn">No AI Guard key set, so requests will be allowed.</span>' : ''); }
+    catch (e) { $('grMsg').innerHTML = `<span class="bad">${esc(e.message)}</span>`; }
+  };
+
+  // ---- llm ----
+  $('prov').onchange = () => { if (!$('baseUrl').value || Object.values(DEFAULT_URLS).includes($('baseUrl').value)) $('baseUrl').value = DEFAULT_URLS[$('prov').value]; };
+  $('saveLlm').onclick = async () => {
+    const llm = { provider: $('prov').value, base_url: $('baseUrl').value, model: $('model').value, temperature: parseFloat($('temp').value || '0.3') };
+    if ($('apiKey').value) llm.api_key = $('apiKey').value;
+    CFG = await post('/admin/api/config', { llm }); $('apiKey').value = ''; renderAll(); $('llmMsg').innerHTML = '<span class="ok">Saved.</span>';
+  };
+  $('listModels').onclick = async () => {
+    $('llmMsg').textContent = 'Listing…';
+    const d = await api('/admin/api/llm/models');
+    $('modelList').innerHTML = d.models.map((m) => `<option value="${esc(m)}">`).join('');
+    $('llmMsg').innerHTML = d.ok ? `<span class="ok">${d.models.length} models:</span> ${esc(d.models.join(', '))}` : `<span class="bad">${esc(d.error)}</span>`;
+  };
+  $('testLlm').onclick = async () => {
+    $('llmMsg').textContent = 'Testing (first call may take a while as the model loads)…';
+    const d = await post('/admin/api/llm/test');
+    $('llmMsg').innerHTML = d.ok ? `<span class="ok">OK in ${d.latency_ms} ms</span>: “${esc(d.reply)}”` : `<span class="bad">${esc(d.error)}</span>`;
+  };
+
+  // ---- activity polling ----
+  let lastTs = 0, events = [];
+  async function poll() {
+    try {
+      const d = await api('/admin/api/events');
+      events = d.events; HITS = d.hit_counts || {};
+      const seen = Object.keys(HITS).length;
+      $('stHit').innerHTML = `${seen}<small> / ${CH.length}</small>`;
+      $('navEv').textContent = events.length ? events.length : '';
+      const byCh = { chat: 0, mcp: 0, infra: 0, blocked: 0 };
+      events.forEach((e) => { if (e.channel === 'mcp') byCh.mcp++; else if (e.channel === 'infra') byCh.infra++; else byCh.chat++; if (e.blocked) byCh.blocked++; });
+      $('actStats').innerHTML = [['Chat turns', byCh.chat], ['MCP calls', byCh.mcp], ['Infra probes', byCh.infra], ['Blocked', byCh.blocked], ['Challenges seen', `${seen}/${CH.length}`]]
+        .map(([k, v]) => `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`).join('');
+      const acts = [];
+      for (const [t, list] of Object.entries(d.actions || {})) list.forEach((a) => acts.push({ t, ...a }));
+      acts.sort((a, b) => b.ts - a.ts);
+      $('actions').innerHTML = acts.length ? acts.slice(0, 20).map((a) => `<div>${new Date(a.ts * 1000).toLocaleTimeString()} · ${a.t} · ${esc(a.action === 'transfer' ? `transfer $${a.amount} ${a.from} → ${a.to}` : `refill ${a.drug} for ${a.mrn} (${a.schedule})`)}</div>`).join('') : '<span style="color:var(--muted)">None yet.</span>';
+      $('events').innerHTML = events.length ? events.map(evHtml).join('') : '<div class="msg">No traffic yet. Open the app or start a Vantyr mission.</div>';
+      renderChallenges();
+    } catch (e) { /* keep polling */ }
+  }
+  function evHtml(e) {
+    const tools = (e.tools || []).map((t) => `<span class="tag">${esc(t.name)}</span>`).join('');
+    const hits = (e.hits || []).map((h) => `<span class="tag hit">${h}</span>`).join('');
+    const gr = e.guard && e.guard.mode && e.guard.mode !== 'off' ? `<span class="tag">${esc(MODE_LABEL[e.guard.mode] || e.guard.mode)}${e.guard.reason ? ': ' + esc(String(e.guard.reason).slice(0, 80)) : ''}</span>` : '';
+    return `<div class="ev"><div class="top"><span>${new Date(e.ts * 1000).toLocaleTimeString()}</span><span class="tag">${esc(e.tenant)}</span><span class="tag">${esc(e.channel)}</span>
+      <span>${esc(e.ip)}</span>${e.blocked ? '<span class="tag warn">blocked</span>' : ''}${e.error ? '<span class="tag bad">error</span>' : ''}${gr}${tools}${hits}</div>
+      <div class="io"><b>in</b> ${esc(e.input)}</div>${e.output ? `<div class="io"><b>out</b> ${esc(String(e.output).slice(0, 500))}</div>` : ''}</div>`;
+  }
+
+  (async () => {
+    const [cfg, ch] = await Promise.all([api('/admin/api/config'), api('/admin/api/challenges')]);
+    CFG = cfg; CH = ch.challenges;
+    renderAll(); poll(); setInterval(poll, 3000);
+    let s = 'overview'; try { s = localStorage.getItem('aitr.admin.s') || s; } catch (_) {}
+    show(s);
+  })();
+})();
+</script>
+</body>
+</html>
