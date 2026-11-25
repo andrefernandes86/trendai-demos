@@ -107,8 +107,8 @@ as shown in the Linux steps above.
 Requires **Docker** and **Docker Compose v2.20+**.
 
 ```bash
-git clone https://github.com/andrefernandes86/trendai-demo.git
-cd trendai-demo
+git clone https://github.com/andrefernandes86/trendai-demos.git
+cd trendai-demos
 cp .env.example .env          # optional — sane defaults are baked in
 docker compose up -d --build
 ```
@@ -159,6 +159,43 @@ Each demo's live "how to run it" script is shown directly on its card in the por
   `ProxyFix` so its multi-page navigation stays under `/smish`.
 
 ---
+
+## The platform shell
+
+After signing in, everything happens in one shell with a single side menu (no top tabs):
+
+| Page | What it does |
+|---|---|
+| **Home** (`/`) | Connection status, every tool with what it uses and whether it is running, recent activity |
+| **Tools** (`/tool/<id>`) | Each tool opens inside the shell. Tools that declare `sections` in `portal/public/demos.js` (today: AI Target Range) hide their own menu and expose those sections as side-menu sub-items |
+| **Activity** (`/activity`) | One feed across tools with what TrendAI decided (AI Guard, File Security, weakness hits), filters and CSV export |
+| **Connections** (`/connections`) | Vision One, AI Guard, File Security keys and LLM endpoints, entered once |
+| **Services & health** (`/system`) | Reachability of every service, version, active Compose profiles, exposure warnings |
+
+The design system lives in `portal/public/ui/trendai.css` (Vantyr-aligned tokens: near-black blue bases, cyan accent, Inter + JetBrains Mono) and `portal/public/ui/shell.js` (session guard + side menu). Tools can link the stylesheet to match.
+
+### Connections: keys entered once
+
+Keys are stored **encrypted** (AES-256-GCM) in the `portal_data` volume and never sent back to the browser. Set `PLATFORM_SECRET` in `.env` to keep the encryption key out of that volume.
+
+The portal **pushes** the settings into each tool through the tool's existing settings API, so no tool needs a code change. It checks every minute and pushes again after a tool restarts and loses its in-memory keys. The *Delivery to tools* table shows the result per tool.
+
+| Tool | Receives |
+|---|---|
+| File Security Scanner | File Security key and region (skipped when it is set to a local scanner) |
+| AI Guard & File Security | AI Guard key and endpoint, File Security key and region, and the LLM when it is an Ollama server |
+| AI Scanner | Vision One key and region (its target model is chosen per scan) |
+| Vision One Chatbot | Vision One key and region, LLM endpoint |
+| AI Target Range | AI Guard (key, endpoint, chunking, fail mode), File Security, LLM endpoint |
+
+AI Guard and File Security fall back to the Vision One key when they have none of their own. Each key has a **Test** button. File Security is tested through the File Security Scanner tool, because the portal itself has no SDK.
+
+Connections is the source of truth: a key typed into a tool's own settings is replaced at the next push.
+
+### Using an external LLM (vLLM or another Ollama)
+
+1. In **Connections → LLM endpoints**, add the endpoint (for vLLM, the `/v1` URL and the served model name), make it the default and click **Test**. Or pre-seed it with `PLATFORM_LLM_URL` / `PLATFORM_LLM_PROVIDER` / `PLATFORM_LLM_MODEL` in `.env`.
+2. Leave `local-llm` out of `COMPOSE_PROFILES` so the bundled Ollama container doesn't start.
 
 ## Prerequisites for individual demos
 
@@ -217,9 +254,11 @@ trendai-demo/
 ├── docker-compose.yml         # top-level orchestration (portal + 3 demos)
 ├── .env.example
 ├── portal/                    # branded login gate + demo hub + reverse proxy (Node/Express)
-│   ├── server.js              #   auth, forced reset, static hosting, demo proxy
+│   ├── server.js              #   auth, forced reset, page routing, platform APIs, demo proxy
+│   ├── connections.js         #   encrypted Connections store + push-to-tool connectors
+│   ├── platform.js            #   Activity feed + Services & health probes
 │   ├── Dockerfile
-│   └── public/                #   login / change-password / dashboard + demos.js
+│   └── public/                #   shell pages, demos.js (tool catalogue), ui/ design system
 └── tools/                     # vendored copies of each demo application
     ├── v1fs-manual-scan/      #   TrendAI Vision One File Security scanner (Go)
     ├── app-sec-file-sec/      #   AI Guard & File Security chatbot (FastAPI + Ollama)

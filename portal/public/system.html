@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Services &amp; health · TrendAI Demo Platform</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="system">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Platform navigation"></aside>
+    <main class="main">
+      <header class="page-head">
+        <div>
+          <span class="eyebrow">Platform</span>
+          <h1>Services &amp; health</h1>
+          <p class="lead">What is running on this host, which version, and what is exposed.</p>
+        </div>
+        <div class="actions"><button class="btn" type="button" id="refresh">Refresh</button></div>
+      </header>
+
+      <div class="row">
+        <section class="card" aria-labelledby="rel-h" style="flex:1 1 300px">
+          <h2 id="rel-h">Release</h2>
+          <div id="release" class="section" style="gap:8px"></div>
+        </section>
+        <section class="card" aria-labelledby="prof-h" style="flex:2 1 460px">
+          <h2 id="prof-h">Profiles</h2>
+          <p class="lead small">Profiles are chosen on the host in <code>.env</code> (<code>COMPOSE_PROFILES</code>), then applied with <code>docker compose up -d</code>.</p>
+          <div class="cols-3" id="profiles"></div>
+        </section>
+      </div>
+
+      <section class="card tight" aria-labelledby="svc-h">
+        <div class="section-head" style="padding:16px 18px 6px"><h2 id="svc-h">Services</h2><span class="muted small" id="svcSummary"></span></div>
+        <div class="table-wrap">
+          <table class="t" style="min-width:820px">
+            <thead><tr><th scope="col">Service</th><th scope="col">Profile</th><th scope="col">Health</th><th scope="col">Response</th><th scope="col">Exposure</th></tr></thead>
+            <tbody id="svcBody"><tr><td colspan="5" class="empty">Checking…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="upd-h">
+        <h2 id="upd-h">Updating this host</h2>
+        <p class="lead small">The portal has no Docker access on purpose, so updates run on the host:</p>
+        <pre class="mono" style="margin:0;padding:12px;border-radius:8px;background:var(--base-950);border:1px solid var(--base-700);font-size:12.5px;overflow-x:auto">cd ~/trendai-demos &amp;&amp; git pull &amp;&amp; docker compose up -d --build</pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, api } = TA;
+      if (!(await TA.boot())) return;
+      const $ = (id) => document.getElementById(id);
+      const PROFILES = [['core', 'Portal and every tool', true], ['local-llm', 'Bundled Ollama on this host', false]];
+
+      async function load() {
+        $('refresh').disabled = true;
+        const d = await api('/api/system').catch(() => null);
+        $('refresh').disabled = false;
+        if (!d) return;
+        $('release').innerHTML = [['Version', d.version], ['Revision', d.revision || '—'], ['Host', d.host || location.host]]
+          .map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:12px"><span class="muted">${k}</span><span class="mono">${esc(v)}</span></div>`).join('');
+        const active = new Set(['core', ...d.profiles]);
+        $('profiles').innerHTML = PROFILES.map(([id, desc, always]) => `
+          <div class="card${active.has(id) ? ' glow' : ''}" style="padding:12px;gap:4px">
+            <span style="display:flex;justify-content:space-between;font-weight:600">${id}<span class="chip ${active.has(id) ? 'info' : ''}">${always ? 'always on' : (active.has(id) ? 'on' : 'off')}</span></span>
+            <span class="muted small">${desc}</span></div>`).join('');
+        const label = { healthy: ['ok', 'Healthy'], unhealthy: ['bad', 'Unhealthy'], unreachable: ['bad', 'Unreachable'] };
+        const shown = d.services.filter((s) => s.profile === 'core' || active.has(s.profile) || s.status === 'healthy');
+        const ok = shown.filter((s) => s.status === 'healthy').length;
+        $('svcSummary').textContent = `${ok} of ${shown.length} healthy`;
+        $('svcBody').innerHTML = d.services.map((s) => {
+          const off = !active.has(s.profile) && s.status !== 'healthy';
+          const [cls, txt] = off ? ['', 'Not enabled'] : (label[s.status] || ['', s.status]);
+          return `<tr><td style="font-weight:500" class="mono">${esc(s.name)}</td><td class="muted">${esc(s.profile)}</td>
+            <td><span class="status ${cls || 'off'}"><span class="dot ${cls === 'ok' ? '' : cls === 'bad' ? 'bad' : 'off'}"></span>${esc(txt)}</span></td>
+            <td class="mono">${s.url ? (s.ms != null && s.status === 'healthy' ? s.ms + ' ms' : esc(s.error || (s.httpStatus ? 'HTTP ' + s.httpStatus : '—'))) : 'self'}</td>
+            <td>${s.warn ? `<span class="chip warn">${esc(s.exposure)}</span>` : `<span class="muted">${esc(s.exposure)}</span>`}</td></tr>`;
+        }).join('');
+      }
+      $('refresh').onclick = load;
+      await load();
+      setInterval(load, 30000);
+    })();
+  </script>
+</body>
+</html>

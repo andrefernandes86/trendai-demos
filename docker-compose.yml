@@ -38,6 +38,17 @@ services:
     environment:
       PORTAL_PORT: "3000"
       PORTAL_DATA_DIR: /data
+      # Encrypts Connections (API keys) at rest. Unset = a random key kept in
+      # the portal_data volume. Set it to keep the key out of the volume.
+      PLATFORM_SECRET: ${PLATFORM_SECRET:-}
+      # Optional: seed an external LLM endpoint as the default in Connections.
+      PLATFORM_LLM_URL: ${PLATFORM_LLM_URL:-}
+      PLATFORM_LLM_PROVIDER: ${PLATFORM_LLM_PROVIDER:-vllm}
+      PLATFORM_LLM_MODEL: ${PLATFORM_LLM_MODEL:-}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
+      # Shown in the side menu and on Services & health.
+      PLATFORM_HOST_LABEL: ${PLATFORM_HOST_LABEL:-}
+      COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
     volumes:
       - portal_data:/data
     depends_on:
@@ -73,7 +84,9 @@ services:
       OLLAMA_BASE_URL: http://ollama:11434
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
     depends_on:
-      - ollama
+      ollama:
+        condition: service_started
+        required: false   # Ollama is optional (profile local-llm); an external LLM is set in Connections
     restart: unless-stopped
 
   # --- Ollama LLM (CPU) — internal only -----------------------------------
@@ -87,6 +100,9 @@ services:
   ollama:
     image: ollama/ollama:latest
     container_name: trendai-ollama
+    # Only started with the local-llm profile (COMPOSE_PROFILES=local-llm in
+    # .env). Hosts that use an external vLLM/Ollama leave it off.
+    profiles: ["local-llm"]
     environment:
       OLLAMA_MODEL: ${OLLAMA_MODEL:-gemma2:2b}
       OLLAMA_EXTRA_MODELS: "${OLLAMA_EXTRA_MODELS:-llama3.2:1b phi3:mini qwen2.5:3b}"
@@ -137,7 +153,9 @@ services:
       context: ./tools/ai-scanner
     container_name: trendai-ai-scanner
     depends_on:
-      - ollama
+      ollama:
+        condition: service_started
+        required: false   # Ollama is optional (profile local-llm); an external LLM is set in Connections
     restart: unless-stopped
 
   # --- Vision One Chatbot (FastAPI + the real trendai-vision-one-mcp-server
@@ -147,7 +165,9 @@ services:
       context: ./tools/v1-chatbot
     container_name: trendai-v1-chatbot
     depends_on:
-      - ollama
+      ollama:
+        condition: service_started
+        required: false   # Ollama is optional (profile local-llm); an external LLM is set in Connections
     restart: unless-stopped
 
   # --- AI Target Range (FastAPI) -----------------------------------------
@@ -175,7 +195,9 @@ services:
       V1FS_API_KEY: ${V1FS_API_KEY:-}
       V1FS_REGION: ${V1FS_REGION:-us-east-1}
     depends_on:
-      - ollama
+      ollama:
+        condition: service_started
+        required: false   # Ollama is optional (profile local-llm); an external LLM is set in Connections
     restart: unless-stopped
 
   # --- Smish Detector (Flask, HTTPS/self-signed) — internal only ----------

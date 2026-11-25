@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Connections · TrendAI Demo Platform</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="connections">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Platform navigation"></aside>
+    <main class="main">
+      <header class="page-head">
+        <div>
+          <span class="eyebrow">Platform</span>
+          <h1>Connections</h1>
+          <p class="lead">Enter each key once. The platform pushes it into every tool that needs it, and pushes it again if a tool restarts. Keys are encrypted at rest and never sent back to the browser.</p>
+        </div>
+        <div class="actions"><button class="btn" type="button" id="syncNow">Push to tools now</button></div>
+      </header>
+
+      <form id="connForm" class="section" style="gap:16px" autocomplete="off">
+        <section class="card" aria-labelledby="v1-h">
+          <div class="section-head">
+            <div><h2 id="v1-h" style="font-size:16px">TrendAI Vision One</h2><p class="lead small">Tenant API key for the Vision One APIs, TMAS and the MCP server.</p></div>
+            <span class="chip lg" id="v1State"></span>
+          </div>
+          <div class="cols-2">
+            <label class="field">API key <span class="hint" id="v1Hint"></span><input type="password" class="mono" id="v1Key" placeholder="Paste a key, or leave blank to keep the current one"></label>
+            <label class="field">Region<select id="v1Region"></select></label>
+          </div>
+          <div class="section-head">
+            <div class="chips small muted">Used by <span id="v1Used"></span></div>
+            <div class="actions"><button class="btn sm danger" type="button" data-clear="visionOne" hidden>Remove key</button><button class="btn sm" type="button" data-test="visionOne">Test</button></div>
+          </div>
+          <div class="msg" data-result="visionOne"></div>
+        </section>
+
+        <div class="row">
+          <section class="card" aria-labelledby="ag-h">
+            <div class="section-head">
+              <div><h2 id="ag-h" style="font-size:16px">AI Guard</h2><p class="lead small">Prompts, responses, retrieved context, MCP calls and document text.</p></div>
+              <span class="chip lg" id="agState"></span>
+            </div>
+            <label class="field">API key <span class="hint">Leave empty to use the Vision One key</span><input type="password" class="mono" id="agKey" placeholder="Optional"></label>
+            <label class="field">Endpoint <span class="hint">Empty = the regional AI Guard endpoint</span><input type="url" class="mono" id="agUrl"></label>
+            <div class="cols-2">
+              <label class="field">Chunk size (KB)<input type="number" id="agKb" min="4" max="50"></label>
+              <label class="field">Max chunks per item<input type="number" id="agChunks" min="1" max="500"></label>
+            </div>
+            <p class="callout">AI Guard accepts 50 KB per request. Longer content is split at paragraph breaks with a 400-character overlap; one blocked chunk blocks the whole item.</p>
+            <label class="check"><input type="checkbox" id="agFail">Fail closed when AI Guard can't be reached</label>
+            <div class="section-head">
+              <div class="chips small muted">Used by <span id="agUsed"></span></div>
+              <div class="actions"><button class="btn sm danger" type="button" data-clear="aiGuard" hidden>Remove key</button><button class="btn sm" type="button" data-test="aiGuard">Test</button></div>
+            </div>
+            <div class="msg" data-result="aiGuard"></div>
+          </section>
+
+          <section class="card" aria-labelledby="fs-h">
+            <div class="section-head">
+              <div><h2 id="fs-h" style="font-size:16px">File Security</h2><p class="lead small">Malware scanning for every uploaded or scanned file.</p></div>
+              <span class="chip lg" id="fsState"></span>
+            </div>
+            <label class="field">API key <span class="hint">Leave empty to use the Vision One key</span><input type="password" class="mono" id="fsKey" placeholder="Optional"></label>
+            <label class="field">Region<select id="fsRegion"></select></label>
+            <label class="check"><input type="checkbox" id="fsPml">Predictive Machine Learning (PML)</label>
+            <label class="check"><input type="checkbox" id="fsFail">Fail closed: reject a file if the scan can't complete</label>
+            <div class="section-head">
+              <div class="chips small muted">Used by <span id="fsUsed"></span></div>
+              <div class="actions"><button class="btn sm danger" type="button" data-clear="fileSecurity" hidden>Remove key</button><button class="btn sm" type="button" data-test="fileSecurity">Test</button></div>
+            </div>
+            <div class="msg" data-result="fileSecurity"></div>
+          </section>
+        </div>
+
+        <section class="card" aria-labelledby="llm-h">
+          <div class="section-head">
+            <div><h2 id="llm-h" style="font-size:16px">LLM endpoints</h2><p class="lead small">Any OpenAI-compatible server (vLLM, Ollama, gateways). Tools use the default unless you pick another below.</p></div>
+            <button class="btn sm" type="button" id="addEp">Add endpoint</button>
+          </div>
+          <div class="table-wrap">
+            <table class="t" style="min-width:980px">
+              <thead><tr><th scope="col">Default</th><th scope="col">Name</th><th scope="col">Type</th><th scope="col">Base URL</th><th scope="col">Model</th><th scope="col">API key</th><th scope="col"><span class="sr">Actions</span></th></tr></thead>
+              <tbody id="epBody"></tbody>
+            </table>
+          </div>
+          <h3 style="margin-top:6px">Which endpoint each tool uses</h3>
+          <div class="grid" id="assign"></div>
+          <p class="muted small" style="margin:0">AI Scanner picks its target model per scan in the tool itself.</p>
+        </section>
+
+        <div class="actions" style="justify-content:flex-end">
+          <span class="msg" id="saveMsg"></span>
+          <button class="btn" type="button" id="discard">Discard changes</button>
+          <button class="btn primary" type="submit" id="save">Save connections</button>
+        </div>
+      </form>
+
+      <section class="card tight" aria-labelledby="sync-h">
+        <div class="section-head" style="padding:16px 18px 6px"><h2 id="sync-h">Delivery to tools</h2><span class="muted small">Checked every minute</span></div>
+        <div class="table-wrap"><table class="t"><thead><tr><th scope="col">Tool</th><th scope="col">Receives</th><th scope="col">Status</th><th scope="col">Detail</th></tr></thead><tbody id="syncBody"></tbody></table></div>
+      </section>
+      <p class="muted small" id="keySource" style="margin:0"></p>
+    </main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, api, toast } = TA;
+      if (!(await TA.boot())) return;
+      const $ = (id) => document.getElementById(id);
+      const USE = { visionOne: 'Vision One', aiGuard: 'AI Guard', fileSecurity: 'File Security', llm: 'LLM' };
+      let C = null, eps = [], clears = {};
+
+      const usedBy = (kind) => TA.demos().filter((d) => (d.uses || []).includes(kind)).map((d) => `<span class="tag">${esc(d.short)}</span>`).join(' ') || '—';
+
+      function stateChip(el, own, from) {
+        const set = own || from === 'visionOne';
+        el.className = 'chip lg ' + (set ? 'ok' : 'bad');
+        el.innerHTML = `<span class="dot ${set ? '' : 'bad'}"></span>${own ? 'Key set' : (from === 'visionOne' ? 'Using the Vision One key' : 'No key')}`;
+      }
+
+      function render() {
+        const m = C.meta;
+        clears = {};
+        $('v1Region').innerHTML = Object.entries(m.regions).map(([k, r]) => `<option value="${k}">${esc(r.label)} · ${esc(r.api.replace('https://', ''))}</option>`).join('');
+        $('v1Region').value = C.visionOne.region;
+        $('v1Hint').textContent = C.visionOne.apiKeySet ? `Stored: ${C.visionOne.apiKeyHint}` : '';
+        $('v1State').className = 'chip lg ' + (C.visionOne.apiKeySet ? 'ok' : 'bad');
+        $('v1State').innerHTML = `<span class="dot ${C.visionOne.apiKeySet ? '' : 'bad'}"></span>${C.visionOne.apiKeySet ? 'Key set' : 'No key'}`;
+        stateChip($('agState'), C.aiGuard.apiKeySet, C.effective.aiGuardKeyFrom);
+        stateChip($('fsState'), C.fileSecurity.apiKeySet, C.effective.fileSecurityKeyFrom);
+        $('agKey').placeholder = C.aiGuard.apiKeySet ? `Stored: ${C.aiGuard.apiKeyHint} · blank keeps it` : 'Optional';
+        $('fsKey').placeholder = C.fileSecurity.apiKeySet ? `Stored: ${C.fileSecurity.apiKeyHint} · blank keeps it` : 'Optional';
+        $('agUrl').value = C.aiGuard.url; $('agUrl').placeholder = C.effective.aiGuardUrl;
+        $('agKb').value = C.aiGuard.maxKb; $('agChunks').value = C.aiGuard.maxChunks; $('agFail').checked = C.aiGuard.failClosed;
+        $('fsRegion').innerHTML = m.fsRegions.map((r) => `<option>${r}</option>`).join('');
+        $('fsRegion').value = C.fileSecurity.region; $('fsPml').checked = C.fileSecurity.pml; $('fsFail').checked = C.fileSecurity.failClosed;
+        $('v1Used').innerHTML = usedBy('visionOne'); $('agUsed').innerHTML = usedBy('aiGuard'); $('fsUsed').innerHTML = usedBy('fileSecurity');
+        document.querySelector('[data-clear=visionOne]').hidden = !C.visionOne.apiKeySet;
+        document.querySelector('[data-clear=aiGuard]').hidden = !C.aiGuard.apiKeySet;
+        document.querySelector('[data-clear=fileSecurity]').hidden = !C.fileSecurity.apiKeySet;
+        ['v1Key', 'agKey', 'fsKey'].forEach((id) => { $(id).value = ''; });
+        eps = C.llm.endpoints.map((e) => ({ ...e, apiKey: '' }));
+        renderEps(); renderAssign(); renderSync();
+        $('keySource').textContent = `Encryption key source: ${m.keySource}${m.keySource === 'PLATFORM_SECRET' ? '' : ' (set PLATFORM_SECRET to keep the key out of the data volume)'}.`;
+      }
+
+      function renderEps() {
+        const m = C.meta;
+        $('epBody').innerHTML = eps.map((e, i) => `
+          <tr>
+            <td><input type="radio" name="defEp" value="${esc(e.id)}" ${e.id === (C._def || C.llm.defaultId) ? 'checked' : ''} aria-label="Default endpoint ${esc(e.name)}"></td>
+            <td><input type="text" data-i="${i}" data-k="name" value="${esc(e.name)}" aria-label="Name"></td>
+            <td><select data-i="${i}" data-k="provider" aria-label="Type">${m.providers.map((p) => `<option value="${p}" ${p === e.provider ? 'selected' : ''}>${p === 'vllm' ? 'vLLM' : p === 'ollama' ? 'Ollama' : 'OpenAI-compatible'}</option>`).join('')}</select></td>
+            <td><input type="url" class="mono" data-i="${i}" data-k="baseUrl" value="${esc(e.baseUrl)}" placeholder="http://host:8000/v1" aria-label="Base URL"></td>
+            <td><input type="text" class="mono" data-i="${i}" data-k="model" value="${esc(e.model)}" placeholder="qwen2.5-7b-instruct" aria-label="Model"></td>
+            <td><input type="password" class="mono" data-i="${i}" data-k="apiKey" placeholder="${e.apiKeySet ? 'Stored ' + esc(e.apiKeyHint) : 'None'}" aria-label="API key"></td>
+            <td style="white-space:nowrap"><button class="btn sm" type="button" data-test-ep="${esc(e.id)}" ${e.isNew ? 'disabled title="Save first"' : ''}>Test</button> <button class="btn sm danger" type="button" data-rm="${i}" aria-label="Remove ${esc(e.name)}">Remove</button>
+              <div class="msg small" data-ep-result="${esc(e.id)}" style="max-width:260px;white-space:normal"></div></td>
+          </tr>`).join('');
+        $('epBody').querySelectorAll('[data-k]').forEach((el) => el.oninput = () => { eps[+el.dataset.i][el.dataset.k] = el.value; if (el.dataset.k === 'name') renderAssign(); });
+        $('epBody').querySelectorAll('[name=defEp]').forEach((el) => el.onchange = () => { C._def = el.value; renderAssign(); });
+        $('epBody').querySelectorAll('[data-rm]').forEach((b) => b.onclick = () => { eps.splice(+b.dataset.rm, 1); renderEps(); renderAssign(); });
+        $('epBody').querySelectorAll('[data-test-ep]').forEach((b) => b.onclick = () => runTest('llm', b.dataset.testEp, document.querySelector(`[data-ep-result="${b.dataset.testEp}"]`)));
+      }
+
+      function renderAssign() {
+        const tools = C.meta.llmTools;
+        const def = eps.find((e) => e.id === (C._def || C.llm.defaultId)) || {};
+        $('assign').innerHTML = Object.entries(tools).map(([id, t]) => {
+          const cur = (C._assign && id in C._assign) ? C._assign[id] : (C.llm.assignments[id] || 'default');
+          const chosen = cur === 'default' ? def : (eps.find((e) => e.id === cur) || def);
+          const bad = chosen && chosen.provider && !t.providers.includes(chosen.provider);
+          return `<label class="field" style="padding:10px 12px;border-radius:8px;border:1px solid var(--base-700);background:var(--base-800)">
+            <span style="display:flex;justify-content:space-between;gap:8px;color:var(--text);font-size:13.5px">${esc(t.label)}</span>
+            <select data-assign="${id}"><option value="default">Default (${esc(def.name || '—')})</option>${eps.map((e) => `<option value="${esc(e.id)}" ${cur === e.id ? 'selected' : ''}>${esc(e.name)}</option>`).join('')}</select>
+            <span class="hint" style="${bad ? 'color:var(--warn)' : ''}">${esc(bad ? `${chosen.name} is ${chosen.provider}; this tool ${t.note.toLowerCase()} It keeps its current LLM.` : t.note)}</span></label>`;
+        }).join('');
+        $('assign').querySelectorAll('[data-assign]').forEach((s) => s.onchange = () => { C._assign = { ...(C._assign || {}), [s.dataset.assign]: s.value }; renderAssign(); });
+      }
+
+      function renderSync() {
+        const label = { 'in-sync': ['ok', 'In sync'], error: ['bad', 'Error'], unreachable: ['warn', 'Unreachable'], skipped: ['', 'Skipped'], idle: ['', 'Waiting for keys'], pending: ['', 'Pending'] };
+        $('syncBody').innerHTML = Object.entries(C.sync).map(([id, s]) => {
+          const [cls, txt] = label[s.status] || ['', s.status];
+          return `<tr><td style="font-weight:500">${esc(s.label)}</td><td><span class="chips">${(s.uses || []).map((u) => `<span class="chip ${u === 'llm' ? 'violet' : ''}">${esc(USE[u] || u)}</span>`).join('')}</span></td>
+            <td><span class="chip ${cls}">${esc(txt)}</span></td><td class="muted small">${esc(s.message || '')}${s.pushedAt ? ` · pushed ${new Date(s.pushedAt).toLocaleTimeString()}` : ''}</td></tr>`;
+        }).join('');
+      }
+
+      async function runTest(kind, endpointId, out) {
+        out = out || document.querySelector(`[data-result="${kind}"]`);
+        out.className = 'msg'; out.textContent = 'Testing…';
+        try {
+          const r = await api(`/api/connections/test/${kind}`, { method: 'POST', body: { endpointId } });
+          out.className = 'msg ' + (r.ok ? 'ok' : 'error'); out.textContent = r.message;
+        } catch (e) { out.className = 'msg error'; out.textContent = e.message; }
+      }
+      document.querySelectorAll('[data-test]').forEach((b) => b.onclick = () => runTest(b.dataset.test));
+      document.querySelectorAll('[data-clear]').forEach((b) => b.onclick = () => {
+        clears[b.dataset.clear] = true; b.hidden = true; toast('The key will be removed when you save.');
+      });
+
+      $('addEp').onclick = () => {
+        eps.push({ id: 'ep-' + Math.random().toString(36).slice(2, 8), name: 'External vLLM', provider: 'vllm', baseUrl: '', model: '', apiKey: '', isNew: true });
+        renderEps(); renderAssign();
+      };
+      $('discard').onclick = async () => { C = await api('/api/connections'); render(); $('saveMsg').textContent = ''; };
+      $('syncNow').onclick = async () => {
+        $('syncNow').disabled = true;
+        try { const r = await api('/api/connections/sync', { method: 'POST' }); C.sync = r.sync; renderSync(); toast('Pushed to tools.'); }
+        catch (e) { toast(e.message); }
+        $('syncNow').disabled = false;
+      };
+
+      $('connForm').onsubmit = async (ev) => {
+        ev.preventDefault();
+        const key = (id) => $(id).value.trim();
+        const patch = {
+          visionOne: { region: $('v1Region').value, ...(key('v1Key') ? { apiKey: key('v1Key') } : {}), ...(clears.visionOne ? { clearKey: true } : {}) },
+          aiGuard: { url: $('agUrl').value.trim(), maxKb: +$('agKb').value, maxChunks: +$('agChunks').value, failClosed: $('agFail').checked,
+            ...(key('agKey') ? { apiKey: key('agKey') } : {}), ...(clears.aiGuard ? { clearKey: true } : {}) },
+          fileSecurity: { region: $('fsRegion').value, pml: $('fsPml').checked, failClosed: $('fsFail').checked,
+            ...(key('fsKey') ? { apiKey: key('fsKey') } : {}), ...(clears.fileSecurity ? { clearKey: true } : {}) },
+          llm: { endpoints: eps.map((e) => ({ id: e.id, name: e.name, provider: e.provider, baseUrl: e.baseUrl, model: e.model, ...(e.apiKey ? { apiKey: e.apiKey } : {}) })),
+            defaultId: C._def || C.llm.defaultId, assignments: C._assign || {} },
+        };
+        $('save').disabled = true; $('saveMsg').className = 'msg'; $('saveMsg').textContent = 'Saving and pushing to tools…';
+        try {
+          C = await api('/api/connections', { method: 'PUT', body: patch });
+          render();
+          $('saveMsg').className = 'msg ok'; $('saveMsg').textContent = 'Saved.';
+        } catch (e) { $('saveMsg').className = 'msg error'; $('saveMsg').textContent = e.message; }
+        $('save').disabled = false;
+      };
+
+      C = await api('/api/connections');
+      render();
+    })();
+  </script>
+</body>
+</html>

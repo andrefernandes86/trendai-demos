@@ -3,152 +3,146 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TrendAI Tools</title>
+  <title>Home · TrendAI Demo Platform</title>
   <link rel="icon" href="/logo.svg" />
-  <link rel="stylesheet" href="/styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
 </head>
-<body>
-  <header class="topbar">
-    <div class="brand">
-      <img src="/logo.svg" width="40" height="40" alt="" />
-      <div>
-        <div class="name">Trend<span class="ai">AI</span> Tools</div>
-        <div class="subtag">Internal sales &amp; demo toolkit</div>
-      </div>
-    </div>
-    <div class="right">
-      <span class="user" id="user"></span>
-      <button class="linkbtn" id="logoutBtn">Sign out</button>
-    </div>
-  </header>
+<body data-page="home">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Platform navigation"></aside>
+    <main class="main">
+      <header class="page-head">
+        <div>
+          <span class="eyebrow">Workspace</span>
+          <h1>Demo hub</h1>
+          <p class="lead">Launch a demo, check what it is connected to, and see what happened across every tool.</p>
+        </div>
+        <div class="actions">
+          <a class="chip lg" id="healthChip" href="/system"><span class="dot off"></span>Checking services…</a>
+          <a class="btn primary" href="/connections"><span id="plugIco"></span>Connections</a>
+        </div>
+      </header>
 
-  <div class="layout">
-    <aside class="sidenav" id="sidenav"></aside>
-
-    <div class="content">
-      <section class="hero">
-        <h1 id="catTitle">Demo Tools</h1>
-        <p id="catBlurb">Launch any tool below. Each card includes a short script for running it live; it opens on this same site, behind your login.</p>
+      <section class="section" aria-labelledby="conn-h">
+        <div class="section-head"><h2 id="conn-h">Connections</h2><span class="muted small">Set once, used by every tool</span></div>
+        <div class="grid" id="connGrid"></div>
       </section>
-      <main class="grid" id="grid"></main>
-    </div>
+
+      <section class="section" aria-labelledby="demo-h">
+        <div class="section-head"><h2 id="demo-h">Demo tools</h2><span class="muted small" id="demoCount"></span></div>
+        <div class="grid wide" id="demoGrid"></div>
+      </section>
+
+      <div class="row">
+        <section class="section" aria-labelledby="other-h" style="flex:1 1 320px">
+          <h2 id="other-h">Business tools &amp; other</h2>
+          <div id="otherList" class="section"></div>
+        </section>
+        <section class="section" aria-labelledby="act-h" style="flex:2 1 480px">
+          <div class="section-head"><h2 id="act-h">Recent activity</h2><a class="small" href="/activity" style="text-decoration:none">View all →</a></div>
+          <div class="card tight" id="recent"><div class="empty">Loading…</div></div>
+        </section>
+      </div>
+    </main>
   </div>
 
-  <footer class="foot">TrendAI Tools · For sales enablement &amp; demonstration use.</footer>
-
-  <script src="/demos.js?v=3"></script>
+  <script src="/demos.js"></script>
+  <script src="/ui/shell.js"></script>
   <script>
-    const CATEGORIES = ['Demo Tools', 'Business Tools', 'Other'];
-    const SIDENAV_SUB = {
-      'Demo Tools': 'Live product demos',
-      'Business Tools': 'Sales & sizing utilities',
-      'Other': 'Additional tools',
-    };
-    const BLURBS = {
-      'Demo Tools': 'Live product demos. Each card includes a short script for running it, and opens on this same site behind your login.',
-      'Business Tools': 'Internal business and sales utilities.',
-      'Other': 'Additional tools and calculators.',
-    };
-
-    const ICONS = {
-      shield: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/></svg>',
-      ai: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V4M8 4h8M9 14h.01M15 14h.01"/></svg>',
-      file: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 15l2 2 4-4"/></svg>',
-      phone: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2" width="10" height="20" rx="2"/><path d="M11 18h2"/></svg>',
-      calc: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M8 6h8M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14v4M8 18h4"/></svg>',
-      server: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="7" rx="1.5"/><rect x="2" y="14" width="20" height="7" rx="1.5"/><line x1="6" y1="6.5" x2="6.01" y2="6.5"/><line x1="6" y1="17.5" x2="6.01" y2="17.5"/></svg>',
-      scan: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/><path d="M12 3v2M12 19v2"/></svg>',
-      target: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>',
-      chat: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 10h.01M12 10h.01M16 10h.01"/></svg>',
-    };
-
-    let activeCategory = 'Demo Tools';
-
-    async function guard() {
-      try {
-        const res = await fetch('/api/session');
-        const s = await res.json();
-        if (!s.authenticated) { window.location.href = '/login'; return null; }
-        if (s.mustChangePassword) { window.location.href = '/change-password'; return null; }
-        document.getElementById('user').textContent = 'Signed in as ' + s.username;
-        return s;
-      } catch (_) {
-        window.location.href = '/login';
-        return null;
-      }
-    }
-
-    function demosIn(category) {
-      return (window.TRENDAI_DEMOS || []).filter((d) => (d.category || 'Other') === category);
-    }
-
-    function buildUrl(demo) {
-      // Every tool is proxied by the portal on this same origin, under its path.
-      return window.location.origin + demo.path + '/';
-    }
-
-    function renderSidenav() {
-      const nav = document.getElementById('sidenav');
-      nav.innerHTML = '<div class="sidenav-title">Tool Categories</div>';
-      CATEGORIES.forEach((cat, i) => {
-        const count = demosIn(cat).length;
-        const btn = document.createElement('button');
-        btn.className = 'sidenav-item' + (cat === activeCategory ? ' active' : '');
-        btn.innerHTML = `
-          <div class="step-num">${i + 1}</div>
-          <div class="step-label">${cat}<span class="count">${count}</span><span class="step-sub">${SIDENAV_SUB[cat] || ''}</span></div>`;
-        btn.addEventListener('click', () => { activeCategory = cat; renderSidenav(); renderGrid(); });
-        nav.appendChild(btn);
-      });
-    }
-
-    function renderGrid() {
-      const grid = document.getElementById('grid');
-      document.getElementById('catTitle').textContent = activeCategory;
-      document.getElementById('catBlurb').textContent = BLURBS[activeCategory] || '';
-      grid.innerHTML = '';
-
-      const items = demosIn(activeCategory);
-      if (!items.length) {
-        grid.innerHTML = '<div class="empty-state">No tools in this section yet.</div>';
-        return;
-      }
-
-      items.forEach((d) => {
-        const url = buildUrl(d);
-        const stepsHtml = (d.steps || []).map((s) => `<li>${s}</li>`).join('');
-        const tagsHtml = (d.tags || []).map((t) => `<span class="tag">${t}</span>`).join('');
-        const noteHtml = d.note ? `<p class="desc" style="margin-top:10px;color:var(--warn)">⚠ ${d.note}</p>` : '';
-        const card = document.createElement('div');
-        card.className = 'card';
-        card.innerHTML = `
-          <div class="icon">${ICONS[d.icon] || ICONS.shield}</div>
-          <div class="subtitle">${d.subtitle}</div>
-          <h3>${d.title}</h3>
-          <p class="desc">${d.desc}</p>
-          ${noteHtml}
-          <div class="tagrow">${tagsHtml}</div>
-          <details class="demo">
-            <summary>How to demo</summary>
-            <ol>${stepsHtml}</ol>
-          </details>
-          <div class="actions">
-            <a class="open-btn" href="${url}" target="_blank" rel="noopener">Open ↗</a>
-          </div>`;
-        grid.appendChild(card);
-      });
-    }
-
-    document.getElementById('logoutBtn').addEventListener('click', async () => {
-      await fetch('/api/logout', { method: 'POST' });
-      window.location.href = '/login';
-    });
-
     (async () => {
-      const s = await guard();
-      if (!s) return;
-      renderSidenav();
-      renderGrid();
+      const { esc, icon, api, fmtTime } = TA;
+      if (!(await TA.boot())) return;
+      document.getElementById('plugIco').innerHTML = icon('plug');
+
+      const USE_LABEL = { visionOne: 'Vision One', aiGuard: 'AI Guard', fileSecurity: 'File Security', llm: 'LLM', 'llm-per-scan': 'LLM · per scan' };
+      let conn = null, health = null;
+
+      function statusFor(d) {
+        const s = health && health.services.find((x) => x.id === d.svc);
+        if (!s) return '<span class="status off"><span class="dot off"></span>Unknown</span>';
+        if (s.status === 'healthy') return '<span class="status ok"><span class="dot"></span>Running</span>';
+        return `<span class="status bad"><span class="dot bad"></span>${esc(s.status)}</span>`;
+      }
+      function llmName(svc) {
+        if (!conn) return 'LLM';
+        const id = conn.llm.assignments[svc] || conn.llm.defaultId;
+        const ep = conn.llm.endpoints.find((e) => e.id === id);
+        return ep ? `LLM · ${ep.name}` : 'LLM';
+      }
+      function useChips(d) {
+        return (d.uses || []).map((u) => u.startsWith('llm')
+          ? `<span class="chip violet">${esc(u === 'llm' ? llmName(d.svc) : USE_LABEL[u])}</span>`
+          : `<span class="chip">${esc(USE_LABEL[u] || u)}</span>`).join('')
+          + (d.svc === 'aitarget' ? '<span class="chip warn">:8090 lab only</span>' : '');
+      }
+
+      function renderTools() {
+        const all = TA.demos();
+        const demo = all.filter((d) => d.category === 'Demo Tools');
+        document.getElementById('demoCount').textContent = `${demo.length} tools · each opens inside this shell`;
+        document.getElementById('demoGrid').innerHTML = demo.map((d) => `
+          <article class="card tool-card${d.svc === 'aitarget' ? ' glow' : ''}">
+            <div class="top"><span class="tile-icon">${icon(d.icon, 20)}</span>
+              <div style="min-width:0"><div class="title">${esc(d.short || d.title)}</div><div class="muted small">${esc((d.subtitle || '').replace(/^Use Case · /, ''))}</div></div></div>
+            <p>${esc(d.desc)}</p>
+            <div class="chips">${useChips(d)}</div>
+            ${d.steps && d.steps.length ? `<details><summary>How to demo</summary><ol>${d.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>${d.note ? `<div class="note">${esc(d.note)}</div>` : ''}</details>` : ''}
+            <div class="foot">${statusFor(d)}<a class="link-btn" href="/tool/${esc(d.id)}">Open →</a></div>
+          </article>`).join('');
+        document.getElementById('otherList').innerHTML = all.filter((d) => d.category !== 'Demo Tools').map((d) => `
+          <article class="card" style="flex-direction:row;align-items:center;gap:12px;padding:16px">
+            <span class="tile-icon violet">${icon(d.icon, 20)}</span>
+            <div style="flex:1;min-width:0"><div style="font-weight:600">${esc(d.short || d.title)}</div><div class="muted small">${esc(d.subtitle || '')}</div></div>
+            <a class="link-btn" href="/tool/${esc(d.id)}">Open →</a>
+          </article>`).join('');
+      }
+
+      function renderConn() {
+        const v = conn.visionOne, ag = conn.aiGuard, fs = conn.fileSecurity;
+        const def = conn.llm.endpoints.find((e) => e.id === conn.llm.defaultId) || {};
+        const region = conn.meta.regions[v.region] || {};
+        const keyState = (own, from) => own ? 'Connected' : (from === 'visionOne' ? 'Vision One key' : 'Not set');
+        const cls = (txt) => txt === 'Not set' ? 'bad' : 'ok';
+        const cards = [
+          ['TrendAI Vision One', v.apiKeySet ? 'Connected' : 'Not set', `${region.label || v.region} · ${(region.api || '').replace('https://', '')}`, v.apiKeySet ? `key ${v.apiKeyHint}` : 'Add an API key'],
+          ['AI Guard', keyState(ag.apiKeySet, conn.effective.aiGuardKeyFrom), `${ag.maxKb} KB chunks · ${ag.failClosed ? 'fail closed' : 'fail open'}`, ag.apiKeySet ? `key ${ag.apiKeyHint}` : (conn.effective.aiGuardKeyFrom === 'visionOne' ? 'uses the Vision One key' : 'Add an API key')],
+          ['File Security', keyState(fs.apiKeySet, conn.effective.fileSecurityKeyFrom), `${fs.region} · PML ${fs.pml ? 'on' : 'off'}`, fs.apiKeySet ? `key ${fs.apiKeyHint}` : (conn.effective.fileSecurityKeyFrom === 'visionOne' ? 'uses the Vision One key' : 'Add an API key')],
+          ['Default LLM', def.baseUrl === 'http://ollama:11434' ? 'Bundled' : 'External', `${def.name || ''}${def.model ? ' · ' + def.model : ''}`, def.baseUrl || ''],
+        ];
+        document.getElementById('connGrid').innerHTML = cards.map(([k, st, v1, v2], i) => `
+          <a class="card${i === 3 ? ' glow' : ''}" href="/connections" style="gap:8px;padding:16px">
+            <span style="display:flex;justify-content:space-between;font-size:12px" class="muted"><span>${esc(k)}</span><span class="status ${i === 3 ? 'ok' : cls(st)}" style="font-size:12px">${esc(st)}</span></span>
+            <span style="font-size:15px;font-weight:600">${esc(v1)}</span>
+            <span class="mono muted" style="font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(v2)}</span>
+          </a>`).join('');
+      }
+
+      function renderHealth() {
+        const chip = document.getElementById('healthChip');
+        const svcs = health.services.filter((s) => s.profile !== 'local-llm' || s.status === 'healthy');
+        const ok = svcs.filter((s) => s.status === 'healthy').length;
+        chip.className = 'chip lg ' + (ok === svcs.length ? 'ok' : 'warn');
+        chip.innerHTML = `<span class="dot ${ok === svcs.length ? '' : 'warn'}"></span>${ok} of ${svcs.length} services healthy`;
+      }
+
+      function outcomeChip(e) {
+        const cls = { blocked: 'bad', finding: 'warn', warn: 'warn', info: 'info' }[e.kind] || 'ok';
+        return `<span class="chip ${cls}">${esc(e.outcome)}</span>`;
+      }
+
+      renderTools();
+      const [c, h, a] = await Promise.allSettled([api('/api/connections'), api('/api/system'), api('/api/activity')]);
+      if (c.status === 'fulfilled') { conn = c.value; renderConn(); }
+      if (h.status === 'fulfilled') { health = h.value; renderHealth(); }
+      renderTools();
+      const rec = document.getElementById('recent');
+      if (a.status === 'fulfilled' && a.value.events.length) {
+        rec.innerHTML = a.value.events.slice(0, 6).map((e) => `<div class="feed-row"><span class="time">${fmtTime(e.ts)}</span><span class="tag">${esc(e.tool)}</span><span class="what">${esc(e.event)}</span>${outcomeChip(e)}</div>`).join('');
+      } else {
+        rec.innerHTML = '<div class="empty">No activity yet. Open a tool to get started.</div>';
+      }
     })();
   </script>
 </body>

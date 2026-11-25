@@ -7,12 +7,19 @@
  * Cloudflare hostname fronts everything and nothing is reachable unauthenticated.
  *
  * `path`     must match a prefix registered in portal/server.js (DEMOS).
+ * `short`    name in the side menu. `svc` = the service id used by Connections
+ *            and Services & health. `uses` = connections the tool consumes.
+ * `sections` (optional) become side-menu sub-items while the tool is open;
+ *            with `embed: true` the tool hides its own navigation in the shell.
  * `category` groups the card under a side-menu section:
  *            'Demo Tools' | 'Business Tools' | 'Other'.
  */
 window.TRENDAI_DEMOS = [
   {
     id: 'v1fs',
+    short: 'File Security Scanner',
+    svc: 'v1fs',
+    uses: ['fileSecurity'],
     category: 'Demo Tools',
     path: '/v1fs',
     title: 'TrendAI Vision One File Security',
@@ -30,6 +37,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'app-sec-file-sec',
+    short: 'AI Guard & File Security',
+    svc: 'appsec',
+    uses: ['aiGuard', 'fileSecurity', 'llm'],
     category: 'Demo Tools',
     path: '/appsec',
     title: 'TrendAI Vision One AI Guard & File Security',
@@ -49,6 +59,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'workload-protection',
+    short: 'Workload Protection',
+    svc: 'workload',
+    uses: [],
     category: 'Demo Tools',
     path: '/workload',
     title: 'TrendAI Vision One — Server & Workload Protection',
@@ -68,6 +81,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'ai-scanner',
+    short: 'AI Scanner',
+    svc: 'aiscanner',
+    uses: ['visionOne', 'llm-per-scan'],
     category: 'Demo Tools',
     path: '/aiscanner',
     title: 'TrendAI Vision One — AI Scanner',
@@ -86,6 +102,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'v1-chatbot',
+    short: 'Vision One Chatbot',
+    svc: 'v1chat',
+    uses: ['visionOne', 'llm'],
     category: 'Demo Tools',
     path: '/v1chat',
     title: 'TrendAI Vision One — Chatbot',
@@ -104,6 +123,11 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'ai-target',
+    short: 'AI Target Range',
+    svc: 'aitarget',
+    uses: ['aiGuard', 'fileSecurity', 'llm'],
+    sections: [{ id: 'overview', label: 'Overview' }, { id: 'challenges', label: 'Challenges & answer key' }, { id: 'activity', label: 'Live activity' }, { id: 'trend', label: 'TrendAI protection' }, { id: 'guardrails', label: 'Built-in guardrails' }, { id: 'llm', label: 'LLM backend' }, { id: 'prompts', label: 'System prompts' }],
+    embed: true,
     category: 'Demo Tools',
     path: '/aitarget',
     title: 'AI Target Range — Vulnerable AI Apps',
@@ -124,6 +148,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'smish',
+    short: 'Smish Detector',
+    svc: 'smish',
+    uses: [],
     category: 'Other',
     path: '/smish',
     title: 'Smish Detector',
@@ -142,6 +169,9 @@ window.TRENDAI_DEMOS = [
   },
   {
     id: 'siemcalc',
+    short: 'SIEM Sizing Calculator',
+    svc: 'siemcalc',
+    uses: [],
     category: 'Business Tools',
     path: '/siemcalc',
     title: 'TrendAI Agentic SIEM Sizing Calculator',

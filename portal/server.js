@@ -16,6 +16,8 @@ const path = require('path');
 const express = require('express');
 const cookieParser = require('cookie-parser');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const { ConnectionStore, Syncer, testConnection, svcUrl } = require('./connections');
+const { Platform } = require('./platform');
 
 const PORT = process.env.PORTAL_PORT || 3000;
 const DATA_DIR = process.env.PORTAL_DATA_DIR || '/data';
@@ -30,14 +32,14 @@ const MIN_PASSWORD_LENGTH = 8;
 // network. `secure:false` skips TLS verification for the self-signed Smish app.
 // ---------------------------------------------------------------------------
 const DEMOS = {
-  v1fs:      { target: 'http://v1fs-scanner:8080',        secure: true },
-  appsec:    { target: 'http://app-sec:8000',             secure: true },
-  smish:     { target: 'https://smish:5000',              secure: false },
-  siemcalc:  { target: 'http://siem-calc:80',             secure: true },
-  workload:  { target: 'http://workload-protection:8000', secure: true },
-  aiscanner: { target: 'http://ai-scanner:8000',          secure: true },
-  v1chat:    { target: 'http://v1-chatbot:8000',          secure: true },
-  aitarget:  { target: 'http://ai-target:8000',           secure: true },
+  v1fs:      { target: svcUrl('v1fs', 'http://v1fs-scanner:8080'),        secure: true },
+  appsec:    { target: svcUrl('appsec', 'http://app-sec:8000'),             secure: true },
+  smish:     { target: svcUrl('smish', 'https://smish:5000'),              secure: false },
+  siemcalc:  { target: svcUrl('siemcalc', 'http://siem-calc:80'),             secure: true },
+  workload:  { target: svcUrl('workload', 'http://workload-protection:8000'), secure: true },
+  aiscanner: { target: svcUrl('aiscanner', 'http://ai-scanner:8000'),          secure: true },
+  v1chat:    { target: svcUrl('v1chat', 'http://v1-chatbot:8000'),          secure: true },
+  aitarget:  { target: svcUrl('aitarget', 'http://ai-target:8000'),           secure: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -88,6 +90,8 @@ function saveAuth(auth) {
 const sessions = new Map(); // token -> { username, createdAt }
 const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 
+function sessionExpiry(s) { return s.createdAt + SESSION_TTL_MS; }
+
 function createSession(username) {
   const token = crypto.randomBytes(24).toString('hex');
   sessions.set(token, { username, createdAt: Date.now() });
@@ -107,6 +111,15 @@ function getSession(token) {
 // ---------------------------------------------------------------------------
 // App
 // ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+// Platform services: Connections (central keys + LLM endpoints), Activity, Health
+// ---------------------------------------------------------------------------
+
+const platform = new Platform();
+const connections = new ConnectionStore(DATA_DIR);
+const syncer = new Syncer(connections, (e) => platform.log(e));
+const SYNC_INTERVAL_MS = Number(process.env.PLATFORM_SYNC_INTERVAL_MS || 60000);
 
 const app = express();
 // The portal's own responses are auth-dependent and must NEVER be cached — a
@@ -210,6 +223,8 @@ app.get('/api/session', (req, res) => {
     authenticated: Boolean(session),
     username: session ? session.username : null,
     mustChangePassword: session ? auth.mustChangePassword : false,
+    expiresAt: session ? sessionExpiry(session) : null,
+    hostLabel: process.env.PLATFORM_HOST_LABEL || '',
   });
 });
 
@@ -223,8 +238,10 @@ app.post('/api/login', jsonParser, (req, res) => {
   const ok = verifyPassword(pw, auth.passwordHash);
   console.log(`[auth] login attempt pwlen=${pw.length} result=${ok ? 'ok' : 'reject'} at ${new Date().toISOString()}`);
   if (!ok) {
+    platform.log({ kind: 'warn', event: 'Failed sign-in', source: req.ip });
     return res.status(401).json({ error: 'Invalid username or password.' });
   }
+  platform.log({ event: 'Signed in', source: req.ip });
   const token = createSession(auth.username);
   res.cookie('sid', token, { httpOnly: true, sameSite: 'lax', maxAge: SESSION_TTL_MS });
   res.json({ ok: true, mustChangePassword: auth.mustChangePassword });
@@ -261,6 +278,7 @@ app.post('/api/change-password', jsonParser, requireAuth, (req, res) => {
   auth.updatedAt = new Date().toISOString();
   saveAuth(auth);
   console.log(`[auth] password changed newlen=${np.length} at ${auth.updatedAt}`);
+  platform.log({ event: 'Portal password changed', source: req.ip });
   res.json({ ok: true });
 });
 
@@ -270,11 +288,54 @@ app.post('/api/change-password', jsonParser, requireAuth, (req, res) => {
 // Serve the right page directly with a 200 (no server-side 302) so browsers
 // that don't follow redirect bodies still render. The client-side scripts
 // re-check /api/session and navigate as needed.
-app.get(['/', '/index.html', '/dashboard', '/dashboard.html'], (req, res) => {
-  const session = currentSession(req);
-  if (!session) return sendPage(res, 'login.html');
-  if (loadAuth().mustChangePassword) return sendPage(res, 'change-password.html');
-  sendPage(res, 'dashboard.html');
+// Shell pages: every one needs a session and a completed first-login reset.
+function shellPage(name) {
+  return (req, res) => {
+    const session = currentSession(req);
+    if (!session) return sendPage(res, 'login.html');
+    if (loadAuth().mustChangePassword) return sendPage(res, 'change-password.html');
+    sendPage(res, name);
+  };
+}
+app.get(['/', '/index.html', '/dashboard', '/dashboard.html'], shellPage('dashboard.html'));
+app.get(['/activity', '/activity.html'], shellPage('activity.html'));
+app.get(['/connections', '/connections.html'], shellPage('connections.html'));
+app.get(['/system', '/system.html'], shellPage('system.html'));
+app.get('/tool/:id', shellPage('tool.html'));
+
+// --- Platform APIs (session required) ---------------------------------------
+
+app.get('/api/connections', requireAuth, (req, res) => {
+  res.json({ ...connections.masked(), sync: syncer.status() });
+});
+
+app.put('/api/connections', jsonParser, requireAuth, async (req, res) => {
+  try {
+    connections.update(req.body || {});
+  } catch (e) {
+    return res.status(400).json({ error: e.message });
+  }
+  platform.log({ event: 'Connections updated', source: req.ip });
+  await syncer.syncAll('connections saved');
+  res.json({ ...connections.masked(), sync: syncer.status() });
+});
+
+app.post('/api/connections/test/:kind', jsonParser, requireAuth, async (req, res) => {
+  res.json(await testConnection(connections, req.params.kind, (req.body || {}).endpointId));
+});
+
+app.post('/api/connections/sync', requireAuth, async (_req, res) => {
+  await syncer.syncAll('manual sync');
+  res.json({ sync: syncer.status() });
+});
+
+app.get('/api/activity', requireAuth, async (req, res) => {
+  const { tool, kind, q } = req.query;
+  res.json(await platform.activity({ tool, kind, q: q ? String(q).slice(0, 200) : '' }));
+});
+
+app.get('/api/system', requireAuth, async (_req, res) => {
+  res.json(await platform.health());
 });
 
 app.get(['/login', '/login.html'], (req, res) => {
@@ -329,4 +390,8 @@ app.use((req, res, next) => {
 app.listen(PORT, () => {
   loadAuth(); // ensure the store is seeded on boot
   console.log(`TrendAI Demo portal listening on :${PORT}`);
+  // Push Connections into the tools once they are up, then keep them in sync
+  // (re-push after a tool restarts and loses its in-memory keys).
+  setTimeout(() => syncer.syncAll('startup').catch(() => {}), 5000);
+  setInterval(() => syncer.syncAll('interval').catch(() => {}), SYNC_INTERVAL_MS);
 });
