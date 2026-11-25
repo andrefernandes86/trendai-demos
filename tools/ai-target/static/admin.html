@@ -4,13 +4,16 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AI Target Range</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
 <style>
-  :root { --bg: #12121f; --bg2: #1c1c30; --bg3: #26263d; --line: #34344f; --text: #e6e6f0; --muted: #9a9ab5;
-          --red: #d71921; --green: #22c55e; --amber: #f59e0b; --blue: #60a5fa; }
+  :root { /* TrendAI Demo Platform tokens (Vantyr-aligned); red = brand and danger only */
+          --bg: #04060b; --bg2: #0b0f1a; --bg3: #0f1420; --line: #212a40; --text: #e2e8f0; --muted: #94a3b8;
+          --accent: #22d3ee; --red: #d71921; --green: #22c55e; --amber: #f59e0b; --blue: #67e8f9; color-scheme: dark; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: "Segoe UI", system-ui, -apple-system, Roboto, Helvetica, Arial, sans-serif; background: var(--bg);
+  body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg);
          color: var(--text); display: flex; min-height: 100vh; font-size: 14px; }
-  code, pre, .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
+  code, pre, .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace; }
   aside { width: 230px; flex-shrink: 0; background: var(--bg2); border-right: 1px solid var(--line); padding: 18px 12px;
           position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; }
   .brand { padding: 0 8px 16px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
@@ -21,11 +24,14 @@
   nav a { display: flex; justify-content: space-between; padding: 9px 10px; border-radius: 8px; color: var(--muted); text-decoration: none;
           cursor: pointer; margin-bottom: 2px; }
   nav a:hover { color: var(--text); background: var(--bg3); }
-  nav a.on { color: #fff; background: var(--bg3); box-shadow: inset 3px 0 0 var(--red); }
+  nav a.on { color: #fff; background: var(--bg3); box-shadow: inset 2px 0 0 var(--accent); }
   nav .count { font-size: 11px; color: var(--muted); }
-  aside .open { margin-top: auto; display: block; text-align: center; background: var(--red); color: #fff; text-decoration: none;
+  aside .open { margin-top: auto; display: block; text-align: center; background: var(--accent); color: #04060b; text-decoration: none;
                 padding: 10px; border-radius: 8px; font-weight: 600; }
   main { flex: 1; padding: 26px 30px 60px; min-width: 0; max-width: 1200px; }
+  /* Inside the platform shell (?embed=1) the shell's side menu replaces this one. */
+  body.embed aside { display: none; }
+  body.embed main { max-width: none; padding: 24px 28px 48px; }
   section { display: none; }
   section.on { display: block; }
   h1 { font-size: 20px; margin-bottom: 4px; }
@@ -46,7 +52,7 @@
   button { background: var(--bg3); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font: inherit;
            font-weight: 600; cursor: pointer; }
   button:hover { border-color: var(--muted); }
-  button.primary { background: var(--red); border-color: var(--red); color: #fff; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #04060b; }
   .msg { font-size: 12.5px; margin-top: 10px; color: var(--muted); }
   .ok { color: var(--green); } .bad { color: #f87171; } .warn { color: var(--amber); }
   pre.code { background: #0c0c16; border: 1px solid var(--line); border-radius: 8px; padding: 12px; overflow-x: auto; font-size: 12px;
@@ -63,7 +69,7 @@
   .switch input { opacity: 0; width: 0; height: 0; }
   .switch span { position: absolute; inset: 0; background: #3b3b55; border-radius: 22px; cursor: pointer; transition: .15s; }
   .switch span:before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: .15s; }
-  .switch input:checked + span { background: var(--red); }
+  .switch input:checked + span { background: var(--accent); }
   .switch input:checked + span:before { transform: translateX(16px); }
   .checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2px 16px; }
   .checks label { display: flex; gap: 8px; align-items: center; color: var(--text); font-size: 13px; margin: 6px 0; }
@@ -72,7 +78,7 @@
   .tag.warn { border-color: rgba(245,158,11,.5); color: #fcd34d; }
   .modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
   .mode { border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: pointer; background: var(--bg3); }
-  .mode.on { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
+  .mode.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   .mode b { display: block; margin-bottom: 4px; }
   .mode span { font-size: 12px; color: var(--muted); line-height: 1.45; }
   .ev { border-bottom: 1px solid var(--line); padding: 10px 0; }
@@ -278,13 +284,22 @@
   const ENGINE = { ai_guard: 'AI Guard', file_security: 'File Security' };
 
   // ---- navigation (side menu only) ----
+  // Inside the platform shell (?embed=1) this page hides its own menu; the shell's side menu drives the
+  // section through the URL hash and is told about section changes made from inside the page.
+  const EMBED = new URLSearchParams(location.search).has('embed');
+  if (EMBED) document.body.classList.add('embed');
+  const SECTIONS = [...document.querySelectorAll('nav a')].map((a) => a.dataset.s);
   function show(s) {
+    if (!SECTIONS.includes(s)) s = 'overview';
     document.querySelectorAll('nav a').forEach((a) => a.classList.toggle('on', a.dataset.s === s));
     document.querySelectorAll('main section').forEach((x) => x.classList.toggle('on', x.id === 's-' + s));
     try { localStorage.setItem('aitr.admin.s', s); } catch (_) {}
+    if (location.hash.slice(1) !== s) history.replaceState(null, '', location.pathname + location.search + '#' + s);
+    if (EMBED && window.parent !== window) window.parent.postMessage({ type: 'trendai:section', section: s }, location.origin);
     if (s === 'prompts') loadPrompt();
   }
   document.querySelectorAll('nav a').forEach((a) => a.onclick = () => show(a.dataset.s));
+  window.addEventListener('hashchange', () => show(location.hash.slice(1)));
 
   function pubBase() {
     return (CFG.public_base_url || `${location.protocol === 'https:' ? 'http:' : location.protocol}//${location.hostname}:8090`).replace(/\/$/, '');
@@ -465,7 +480,8 @@
     const [cfg, ch] = await Promise.all([api('/admin/api/config'), api('/admin/api/challenges')]);
     CFG = cfg; CH = ch.challenges;
     renderAll(); poll(); setInterval(poll, 3000);
-    let s = 'overview'; try { s = localStorage.getItem('aitr.admin.s') || s; } catch (_) {}
+    let s = location.hash.slice(1);
+    if (!SECTIONS.includes(s)) { s = 'overview'; try { s = localStorage.getItem('aitr.admin.s') || s; } catch (_) {} }
     show(s);
   })();
 })();

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Tool · TrendAI Demo Platform</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="tool">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Platform navigation"></aside>
+    <main class="main flush">
+      <div class="tool-bar">
+        <div style="display:flex;flex-direction:column;gap:2px;min-width:0">
+          <nav class="crumbs" aria-label="Breadcrumb"><a href="/" id="crumbCat">Demo tools</a> / <span id="crumbSec"></span></nav>
+          <div class="title"><span class="tile-icon" id="toolIcon" style="width:30px;height:30px;border-radius:8px"></span><h1 id="toolTitle" style="font-size:18px"></h1></div>
+        </div>
+        <div class="actions">
+          <span class="chips" id="toolUses"></span>
+          <a class="btn sm" id="newTab" target="_blank" rel="noopener"><span id="extIco"></span>Open in a new tab</a>
+        </div>
+      </div>
+      <iframe class="tool-frame" id="frame" title="Tool"></iframe>
+      <div class="empty" id="notFound" hidden>That tool doesn't exist. <a href="/">Back to the hub</a></div>
+    </main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, icon } = TA;
+      const session = await TA.boot();
+      if (!session) return;
+      const d = TA.demoById(TA.toolIdFromPath());
+      const frame = document.getElementById('frame');
+      if (!d) { frame.hidden = true; document.getElementById('notFound').hidden = false; return; }
+
+      const USE = { visionOne: 'Vision One', aiGuard: 'AI Guard', fileSecurity: 'File Security', llm: 'LLM', 'llm-per-scan': 'LLM · per scan' };
+      document.title = `${d.short || d.title} · TrendAI Demo Platform`;
+      document.getElementById('toolTitle').textContent = d.short || d.title;
+      document.getElementById('toolIcon').innerHTML = icon(d.icon, 16);
+      document.getElementById('crumbCat').textContent = d.category || 'Tools';
+      document.getElementById('toolUses').innerHTML = (d.uses || []).map((u) => `<span class="chip ${u.startsWith('llm') ? 'violet' : ''}">${esc(USE[u] || u)}</span>`).join('');
+      document.getElementById('extIco').innerHTML = icon('external');
+
+      const base = d.path + '/';
+      const section = () => (location.hash || (d.sections && d.sections.length ? '#' + d.sections[0].id : '')).slice(1);
+      const src = () => base + (d.embed ? '?embed=1' : '') + (section() ? '#' + section() : '');
+      function syncCrumb() {
+        const s = (d.sections || []).find((x) => x.id === section());
+        document.getElementById('crumbSec').textContent = s ? `${d.short} / ${s.label}` : (d.short || d.title);
+      }
+      frame.src = src();
+      document.getElementById('newTab').href = base;
+      syncCrumb();
+
+      // Side-menu sub-items change the hash: move the embedded tool to that section without reloading it.
+      window.addEventListener('hashchange', () => {
+        try { frame.contentWindow.location.hash = section(); } catch (_) { frame.src = src(); }
+        syncCrumb();
+        TA.renderSide(session);
+      });
+      // The embedded tool can report its own section changes back to the shell.
+      window.addEventListener('message', (e) => {
+        if (e.origin !== location.origin || !e.data || e.data.type !== 'trendai:section') return;
+        if (('#' + e.data.section) !== location.hash) { history.replaceState(null, '', '#' + e.data.section); syncCrumb(); TA.renderSide(session); }
+      });
+    })();
+  </script>
+</body>
+</html>

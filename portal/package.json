@@ -1,6 +1,6 @@
 {
   "name": "trendai-demo-portal",
-  "version": "1.0.0",
+  "version": "1.5.0",
   "description": "TrendAI Demo Platform portal — auth gate + demo shortcut hub",
   "main": "server.js",
   "type": "commonjs",

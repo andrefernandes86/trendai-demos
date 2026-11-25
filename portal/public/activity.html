@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Activity · TrendAI Demo Platform</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="activity">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Platform navigation"></aside>
+    <main class="main">
+      <header class="page-head">
+        <div>
+          <span class="eyebrow">Workspace</span>
+          <h1>Activity</h1>
+          <p class="lead">Scans, uploads, prompts and probes across the tools, with what TrendAI decided. Refreshes every 5 seconds.</p>
+        </div>
+        <div class="actions"><button class="btn" type="button" id="csv">Export CSV</button></div>
+      </header>
+
+      <div class="grid" id="stats"></div>
+
+      <form class="actions" id="filters" aria-label="Filters" style="align-items:flex-end">
+        <label class="field" style="width:220px">Tool<select id="fTool"><option value="">All tools</option></select></label>
+        <label class="field" style="width:180px">Outcome<select id="fKind"><option value="">Any</option><option value="blocked">Blocked</option><option value="finding">Weakness hit</option><option value="warn">Warning or error</option><option value="info">Allowed or info</option></select></label>
+        <label class="field" style="flex:1 1 240px">Search<input type="search" id="fQ" placeholder="Prompt text, file name, IP…"></label>
+      </form>
+
+      <div class="card tight">
+        <div class="table-wrap">
+          <table class="t" style="min-width:880px">
+            <thead><tr><th scope="col">Time</th><th scope="col">Tool</th><th scope="col">Event</th><th scope="col">Source</th><th scope="col">Outcome</th></tr></thead>
+            <tbody id="rows"><tr><td colspan="5" class="empty">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+      <p class="muted small" id="sources" style="margin:0"></p>
+    </main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, api, fmtTime } = TA;
+      if (!(await TA.boot())) return;
+      const $ = (id) => document.getElementById(id);
+      $('fTool').innerHTML += [['platform', 'Platform'], ...TA.demos().map((d) => [d.svc, d.short])].map(([v, l]) => `<option value="${esc(v)}">${esc(l)}</option>`).join('');
+      let last = [];
+      const cls = { blocked: 'bad', finding: 'warn', warn: 'warn', info: 'info' };
+
+      async function load() {
+        const qs = new URLSearchParams({ tool: $('fTool').value, kind: $('fKind').value, q: $('fQ').value.trim() });
+        let d;
+        try { d = await api('/api/activity?' + qs); } catch (_) { return; }
+        last = d.events;
+        const s = d.stats;
+        $('stats').innerHTML = [['Events, last 24 h', s.events, ''], ['Blocked by AI Guard', s.blockedAiGuard, 'var(--bad)'], ['Malware by File Security', s.blockedFileSecurity, 'var(--bad)'], ['Red-team weakness hits', s.findings, 'var(--warn)']]
+          .map(([k, v, c]) => `<div class="card stat" style="gap:2px;padding:14px 16px"><span class="k">${k}</span><span class="v" style="${c ? 'color:' + c : ''}">${v}</span></div>`).join('');
+        $('rows').innerHTML = d.events.length ? d.events.map((e) => `<tr>
+            <td class="mono">${fmtTime(e.ts)}</td><td>${esc(e.tool)}</td>
+            <td style="max-width:520px;overflow-wrap:anywhere">${esc(e.event)}${e.detail ? `<div class="muted small">${esc(e.detail)}</div>` : ''}</td>
+            <td class="mono">${esc(e.source || '')}</td>
+            <td><span class="chip ${cls[e.kind] || 'ok'}">${esc(e.outcome)}</span></td></tr>`).join('')
+          : '<tr><td colspan="5" class="empty">Nothing matches these filters yet.</td></tr>';
+        $('sources').textContent = 'Sources: ' + d.sources.map((x) => `${x.label}${x.ok ? '' : ' (not reachable)'}`).join(' · ') + '. Other tools join the feed as they add an event API.';
+      }
+
+      ['fTool', 'fKind'].forEach((id) => $(id).onchange = load);
+      let t; $('fQ').oninput = () => { clearTimeout(t); t = setTimeout(load, 250); };
+      $('filters').onsubmit = (e) => { e.preventDefault(); load(); };
+      $('csv').onclick = () => {
+        const q = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+        const csv = ['time,tool,event,source,outcome', ...last.map((e) => [new Date(e.ts * 1000).toISOString(), e.tool, e.event, e.source, e.outcome].map(q).join(','))].join('\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+        a.download = `trendai-activity-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click(); URL.revokeObjectURL(a.href);
+      };
+      await load();
+      setInterval(load, 5000);
+    })();
+  </script>
+</body>
+</html>

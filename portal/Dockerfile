@@ -5,7 +5,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev
 
-COPY server.js ./
+COPY server.js connections.js platform.js ./
 COPY public ./public
 
 ENV PORTAL_PORT=3000
