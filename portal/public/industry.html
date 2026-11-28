@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Industry · TrendAI Demo Center</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="industry">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Demo Center navigation"></aside>
+    <main class="main" id="main"></main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/center.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, indIcon } = TA;
+      const id = (location.pathname.match(/\/industry\/([^/]+)/) || [])[1];
+      const i = TA.IND(id);
+      if (!(await TA.bootCenter({ type: 'industry', id }))) return;
+      const C = window.TRENDAI_CENTER;
+      const solName = (s) => (C.SOLUTIONS.find((x) => x.id === s) || {}).name || s;
+      const main = document.getElementById('main');
+      if (!i) { main.innerHTML = '<div class="empty">Unknown industry. <a href="/">Back to the Demo Center</a></div>'; return; }
+
+      main.innerHTML = `
+        <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Demo Center</a> / ${esc(i.name)}</nav>
+        <header class="section" style="gap:14px;max-width:860px">
+          <div style="display:flex;align-items:center;gap:14px">
+            <span style="width:48px;height:48px;border-radius:12px;background:${i.color}1f;color:${i.color};display:flex;align-items:center;justify-content:center">${indIcon(i.icon, 24)}</span>
+            <div><div class="small" style="color:${i.color};text-transform:uppercase;letter-spacing:.04em">${esc(i.name)}</div><h1>${esc(i.company)}</h1></div>
+          </div>
+          <p class="lead" style="font-size:15px">${esc(i.tagline)}</p>
+          <div class="chips">${i.regs.map((r) => `<span class="chip">${esc(r)}</span>`).join('')}</div>
+        </header>
+
+        <div class="row">
+          <section class="card" aria-labelledby="risk-h" style="flex:1 1 320px">
+            <h2 id="risk-h">Top risks</h2>
+            <ul style="margin:0;padding-left:18px;display:flex;flex-direction:column;gap:8px;font-size:13.5px;line-height:1.5;color:var(--text-2)">
+              ${i.risks.map((r) => `<li>${esc(r)}</li>`).join('')}
+            </ul>
+          </section>
+          <section class="card" aria-labelledby="asst-h" style="flex:1 1 320px">
+            <h2 id="asst-h">${esc(i.company)} AI assistant</h2>
+            <p class="lead small">Meet <b>${esc(i.assistant)}</b>, ${esc(i.company)}’s assistant. Chat normally, then switch TrendAI protection on and off to compare.</p>
+            <a class="btn primary" href="/tool/ai-target" style="align-self:flex-start">Open the assistants</a>
+          </section>
+        </div>
+
+        <section class="section" aria-labelledby="sto-h">
+          <div class="section-head"><h2 id="sto-h" style="font-size:18px">Demo stories</h2><span class="muted small">${i.stories.length} scenarios</span></div>
+          <div class="grid wide">
+            ${i.stories.map((s) => `
+              <a class="card" href="/story/${s.id}" style="gap:12px;text-decoration:none${s.featured ? ';border-color:var(--info-line);box-shadow:var(--glow)' : ''}">
+                <div class="small muted">${s.minutes} min · ${s.steps.length} steps</div>
+                <span style="font-size:16px;font-weight:600;line-height:1.35">${esc(s.title)}</span>
+                <p style="margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)">${esc(s.summary)}</p>
+                <div class="chips"><span class="chip info">${esc(solName(s.solution))}</span></div>
+                <span style="margin-top:auto;font-size:13.5px;color:var(--cyan-text);font-weight:600">Start story →</span>
+              </a>`).join('')}
+          </div>
+        </section>`;
+    })();
+  </script>
+</body>
+</html>

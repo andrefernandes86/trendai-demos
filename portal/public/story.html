@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Demo story · TrendAI Demo Center</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+  <style>
+    .steps { display: flex; flex-direction: column; gap: 14px; counter-reset: step; }
+    .step { display: flex; gap: 16px; padding: 18px; border-radius: 12px; background: var(--base-850); border: 1px solid var(--base-700); }
+    .step .num { width: 30px; height: 30px; flex-shrink: 0; border-radius: 50%; background: var(--base-700); color: var(--cyan-text); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px; }
+    .step.done .num { background: var(--ok-bg); color: var(--ok); border: 1px solid var(--ok-line); }
+    .step .body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+    .step h3 { font-size: 15.5px; }
+    .step .expect { font-size: 13.5px; line-height: 1.5; color: var(--muted); }
+    .step .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .step .act { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .progress-rail { height: 6px; border-radius: 999px; background: var(--base-700); overflow: hidden; }
+    .progress-rail > span { display: block; height: 100%; background: var(--cyan); transition: width .2s; }
+  </style>
+</head>
+<body data-page="story">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Demo Center navigation"></aside>
+    <main class="main" id="main"></main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/center.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, icon } = TA;
+      const id = (location.pathname.match(/\/story\/([^/]+)/) || [])[1];
+      const C = window.TRENDAI_CENTER;
+      let found = null;
+      C.INDUSTRIES.forEach((i) => i.stories.forEach((s) => { if (s.id === id) found = { i, s }; }));
+      if (!(await TA.bootCenter(found ? { type: 'industry', id: found.i.id } : { type: 'home' }))) return;
+      const main = document.getElementById('main');
+      if (!found) { main.innerHTML = '<div class="empty">Unknown story. <a href="/">Back to the Demo Center</a></div>'; return; }
+      const { i, s } = found;
+      const solName = (x) => (C.SOLUTIONS.find((y) => y.id === x) || {}).name || x;
+      const demo = (tid) => (window.TRENDAI_DEMOS || []).find((d) => d.id === tid);
+      const key = 'aitr.story.' + s.id;
+      let done = {};
+      try { done = JSON.parse(localStorage.getItem(key) || '{}'); } catch (_) {}
+
+      function save() { try { localStorage.setItem(key, JSON.stringify(done)); } catch (_) {} }
+
+      const ACTIONS = {
+        'enable-protection': { label: 'Open Settings', href: '/tool/ai-target#trend', note: 'Turn on AI Guard and File Security in the tool’s TrendAI protection tab, then reset and re-run.' },
+        'prompt-check': { label: 'Open Prompt check', href: '/tool/ai-target', note: 'Type a risky prompt in the assistant and watch AI Guard decide.' },
+        'lab-k8s': { label: 'Open Settings', href: '/connections', note: 'Enter your Kubernetes lab URL and service-account token under Settings.' },
+      };
+
+      function stepAction(st) {
+        if (st.tool) {
+          const d = demo(st.tool);
+          if (d) return { label: 'Open ' + (d.short || d.title), href: '/tool/' + st.tool, note: '' };
+          return { label: '', href: '', note: 'Runs on the demo host — ask your TrendAI contact to trigger it, or enable the attack-sim profile.' };
+        }
+        if (st.action && ACTIONS[st.action]) return ACTIONS[st.action];
+        return { label: '', href: '', note: '' };
+      }
+
+      function render() {
+        const total = s.steps.length;
+        const ndone = s.steps.filter((_, n) => done[n]).length;
+        main.innerHTML = `
+          <nav class="crumbs" aria-label="Breadcrumb"><a href="/">Demo Center</a> / <a href="/industry/${i.id}">${esc(i.company)}</a> / Story</nav>
+          <header class="section" style="gap:12px;max-width:820px">
+            <div class="small muted" style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:${i.color}"></span>${esc(i.company)} · ${s.minutes} min · ${total} steps</div>
+            <h1 style="font-size:26px;line-height:1.2">${esc(s.title)}</h1>
+            <p class="lead">${esc(s.summary)}</p>
+            <div class="chips"><span class="chip info">${esc(solName(s.solution))}</span></div>
+            <div style="display:flex;align-items:center;gap:12px;margin-top:4px">
+              <div class="progress-rail" style="flex:1;max-width:320px"><span style="width:${Math.round(ndone / total * 100)}%"></span></div>
+              <span class="small muted">${ndone} of ${total} done</span>
+              ${ndone ? '<button class="link-btn" id="reset" type="button">Reset</button>' : ''}
+            </div>
+          </header>
+          <div class="steps">
+            ${s.steps.map((st, n) => {
+              const a = stepAction(st);
+              return `<div class="step${done[n] ? ' done' : ''}">
+                <span class="num">${done[n] ? '✓' : n + 1}</span>
+                <div class="body">
+                  <h3>${esc(st.title)}</h3>
+                  <div class="expect"><b style="color:var(--text-2)">What you’ll see:</b> ${esc(st.expect)}</div>
+                  <div class="meta">
+                    <span class="chip info">${esc(solName(st.solution))}</span>
+                    ${st.console ? `<span class="chip">Vision One: ${esc(st.console)}</span>` : ''}
+                  </div>
+                  ${a.note ? `<div class="callout">${esc(a.note)}</div>` : ''}
+                  <div class="act">
+                    ${a.href ? `<a class="btn primary" href="${a.href}" target="_blank" rel="noopener">${esc(a.label)}</a>` : ''}
+                    <button class="btn" type="button" data-toggle="${n}">${done[n] ? 'Mark not done' : 'Mark done'}</button>
+                  </div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+          <div class="actions" style="justify-content:space-between;padding-top:8px">
+            <a class="btn" href="/industry/${i.id}">← ${esc(i.company)} stories</a>
+            ${ndone === total ? '<span class="chip ok">Story complete 🎉</span>' : ''}
+          </div>`;
+        main.querySelectorAll('[data-toggle]').forEach((b) => b.onclick = () => { const n = +b.dataset.toggle; done[n] = !done[n]; save(); render(); });
+        const r = document.getElementById('reset');
+        if (r) r.onclick = () => { done = {}; save(); render(); };
+      }
+      render();
+    })();
+  </script>
+</body>
+</html>

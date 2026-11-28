@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Solutions · TrendAI Demo Center</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="solutions">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Demo Center navigation"></aside>
+    <main class="main">
+      <header class="section" style="gap:8px"><span class="eyebrow">Demo Center</span><h1>Trend Vision One solutions</h1><p class="lead">Each official module, and the demo stories that exercise it.</p></header>
+      <div class="section" id="list"></div>
+    </main>
+  </div>
+  <script src="/demos.js"></script>
+  <script src="/center.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc } = TA;
+      const hash = (location.hash || '').slice(1);
+      if (!(await TA.bootCenter({ type: 'solutions', id: hash }))) return;
+      const C = window.TRENDAI_CENTER;
+      const storiesFor = (sid) => { const out = []; C.INDUSTRIES.forEach((i) => i.stories.forEach((s) => { if (s.solution === sid) out.push({ i, s }); })); return out; };
+      document.getElementById('list').innerHTML = C.SOLUTIONS.map((sol) => {
+        const rows = storiesFor(sol.id);
+        return `<section class="card" id="${sol.id}" aria-labelledby="h-${sol.id}" style="gap:14px${sol.id === hash ? ';border-color:var(--info-line);box-shadow:var(--glow)' : ''}">
+          <div style="display:flex;align-items:center;gap:12px"><span style="width:10px;height:10px;border-radius:3px;background:${sol.color}"></span><div><h2 id="h-${sol.id}" style="font-size:16px">${esc(sol.name)}</h2><span class="small muted">${esc(sol.blurb)}</span></div></div>
+          ${rows.length ? `<div class="grid wide">${rows.map(({ i, s }) => `
+            <a class="card" href="/story/${s.id}" style="gap:8px;text-decoration:none;background:var(--base-800)">
+              <div class="small muted" style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:${i.color}"></span>${esc(i.company)}</div>
+              <span style="font-size:14.5px;font-weight:600;line-height:1.35">${esc(s.title)}</span>
+              <span class="small" style="color:var(--cyan-text);font-weight:600">Start →</span>
+            </a>`).join('')}</div>` : '<p class="muted small" style="margin:0">Guided story coming soon.</p>'}
+        </section>`;
+      }).join('');
+      if (hash) { const el = document.getElementById(hash); if (el) el.scrollIntoView(); }
+    })();
+  </script>
+</body>
+</html>

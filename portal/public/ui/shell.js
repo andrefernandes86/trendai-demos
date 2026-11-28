@@ -138,5 +138,69 @@
     return session;
   }
 
-  window.TA = { icon, esc, api, toast, fmtTime, demos, demoById, toolIdFromPath, boot, renderSide };
+  // ---- Demo Center navigation (industries / solutions / stories) ----
+  const IND_ICON = {
+    bank: '<path d="M3 10 12 4l9 6"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/>',
+    heart: '<path d="M12 21s-7-4.4-9.3-9A5.3 5.3 0 0 1 12 6.6 5.3 5.3 0 0 1 21.3 12C19 16.6 12 21 12 21z"/>',
+    factory: '<path d="M3 21V10l6 4V10l6 4V6l6 4v11z"/><path d="M7 17h2M12 17h2M17 17h1"/>',
+    cart: '<path d="M4 7h16l-1.5 9h-13z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/><circle cx="9" cy="20" r="1"/><circle cx="16" cy="20" r="1"/>',
+    gov: '<path d="M3 21h18M5 21V10M19 21V10M9 21v-6h6v6"/><path d="M3 10 12 3l9 7z"/>',
+  };
+  function iconPath(paths, size = 16) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+  }
+
+  function renderCenterNav(session, active) {
+    const side = document.getElementById('side');
+    if (!side) return;
+    const C = window.TRENDAI_CENTER || { INDUSTRIES: [], SOLUTIONS: [] };
+    const host = session.hostLabel || location.host;
+    const link = (href, inner, on) => `<a class="nav-item${on ? ' active' : ''}" href="${href}"${on ? ' aria-current="page"' : ''}>${inner}</a>`;
+    const ind = C.INDUSTRIES.map((i) => link(`/industry/${i.id}`,
+      `<span style="width:8px;height:8px;border-radius:2px;background:${i.color};flex-shrink:0"></span><span class="grow">${esc(i.name)}</span>`,
+      active.type === 'industry' && active.id === i.id)).join('');
+    const sol = C.SOLUTIONS.map((s) => link(`/solutions#${s.id}`, `<span class="grow">${esc(s.name)}</span>`,
+      active.type === 'solutions' && active.id === s.id)).join('');
+    side.innerHTML = `
+      <a class="brand" href="/"><span class="brand-mark">AI</span><span style="min-width:0"><span class="brand-name">TrendAI <span>Demo Center</span></span><span class="brand-host">${esc(host)}</span></span></a>
+      <label class="side-search">${icon('search')}<input type="search" id="navSearch" aria-label="Search stories, industries and tools" placeholder="Search"></label>
+      <div class="nav-group">
+        ${link('/', `${icon('home')}<span class="grow">Home</span>`, active.type === 'home')}
+        ${link('/stories', `${iconPath('<path d="M5 4h11l3 3v13H5z"/><path d="M9 9h6M9 13h6M9 17h3"/>')}<span class="grow">All demo stories</span>`, active.type === 'stories')}
+      </div>
+      <div class="nav-group"><span class="nav-label">Industries</span>${ind}</div>
+      <div class="nav-group"><span class="nav-label">Solutions</span>${sol}</div>
+      <div class="nav-group"><span class="nav-label">Admin</span>
+        ${link('/tools', `${icon('layers')}<span class="grow">All tools</span>`, false)}
+        ${link('/connections', `${icon('plug')}<span class="grow">Settings</span>`, false)}
+        ${link('/system', `${icon('activity')}<span class="grow">Services &amp; health</span>`, false)}
+      </div>
+      <div class="side-foot"><span class="avatar">${esc((session.username || 'a')[0].toUpperCase())}</span>
+        <span style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font-size:13px;font-weight:600">${esc(session.username || '')}</span><span class="muted" style="font-size:11.5px">Demo session</span></span>
+        <button class="icon-btn" id="signOut" type="button" aria-label="Sign out">${icon('logout')}</button></div>`;
+    document.getElementById('signOut').onclick = async () => { await fetch('/api/logout', { method: 'POST' }); location.href = '/login'; };
+    const search = document.getElementById('navSearch');
+    if (search) search.addEventListener('keydown', (e) => { if (e.key === 'Enter' && search.value.trim()) location.href = '/stories?q=' + encodeURIComponent(search.value.trim()); });
+    if (!document.querySelector('.mobile-bar')) {
+      const bar = document.createElement('div');
+      bar.className = 'mobile-bar';
+      bar.innerHTML = `<a class="brand" href="/"><span class="brand-mark">AI</span><span class="brand-name">TrendAI <span>Demo Center</span></span></a><button class="icon-btn" type="button" aria-label="Menu">${icon('menu')}</button>`;
+      side.parentNode.insertBefore(bar, side);
+      bar.querySelector('button').onclick = () => side.classList.toggle('open');
+    }
+  }
+
+  async function bootCenter(active) {
+    let session;
+    try { session = await (await fetch('/api/session')).json(); } catch (_) { location.href = '/login'; return null; }
+    if (!session.authenticated) { location.href = '/login'; return null; }
+    if (session.mustChangePassword) { location.href = '/change-password'; return null; }
+    renderCenterNav(session, active || { type: 'home' });
+    return session;
+  }
+  const IND = (id) => (window.TRENDAI_CENTER || { INDUSTRIES: [] }).INDUSTRIES.find((i) => i.id === id);
+  const SOL = (id) => (window.TRENDAI_CENTER || { SOLUTIONS: [] }).SOLUTIONS.find((s) => s.id === id);
+  const indIcon = (name, size) => iconPath(IND_ICON[name] || IND_ICON.bank, size);
+
+  window.TA = { icon, esc, api, toast, fmtTime, demos, demoById, toolIdFromPath, boot, renderSide, bootCenter, renderCenterNav, IND, SOL, indIcon };
 })();

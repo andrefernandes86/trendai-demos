@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>TrendAI Solutions Demo Center</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="center">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Demo Center navigation"></aside>
+    <main class="main">
+      <header class="section" style="gap:14px;max-width:860px">
+        <span class="eyebrow" style="color:var(--cyan-text)">TrendAI Vision One · interactive demos</span>
+        <h1 style="font-size:36px;line-height:1.12">See how TrendAI protects a company like yours</h1>
+        <p class="lead" style="font-size:15.5px">Pick an industry and walk through real attacks against a realistic company: an AI assistant leaking customer data, malware hidden in a document, an exploit on a factory server. Every step runs live, and you see exactly what TrendAI detects and blocks.</p>
+        <div class="actions" style="margin-top:4px">
+          <a class="btn primary" href="#industries">Choose your industry</a>
+          <a class="btn" href="#try">Try a quick check</a>
+        </div>
+      </header>
+
+      <section class="section" id="industries" aria-labelledby="ind-h">
+        <div class="section-head"><h2 id="ind-h" style="font-size:18px">Choose your industry</h2><span class="muted small">Each is a fictional company with its own data, apps and attacks</span></div>
+        <div class="grid wide" id="indGrid"></div>
+      </section>
+
+      <section class="section" aria-labelledby="st-h">
+        <div class="section-head"><h2 id="st-h" style="font-size:18px">Popular demo stories</h2><a class="small" href="/stories" style="text-decoration:none">All stories →</a></div>
+        <div class="grid wide" id="storyGrid"></div>
+      </section>
+
+      <section class="section" id="try" aria-labelledby="try-h">
+        <div class="section-head"><h2 id="try-h" style="font-size:18px">Try it yourself</h2><span class="muted small">Quick checks with real TrendAI engines</span></div>
+        <div class="grid wide" id="tryGrid"></div>
+      </section>
+
+      <section class="section" id="solutions" aria-labelledby="sol-h">
+        <h2 id="sol-h" style="font-size:18px">Explore by solution</h2>
+        <p class="lead small">Official Trend Vision One modules. Each story names the module it exercises.</p>
+        <div class="grid" id="solGrid"></div>
+      </section>
+
+      <footer class="muted small" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;padding-top:20px;border-top:1px solid var(--base-700)">
+        <span>All companies, people and data in these demos are fictional. Your session is isolated.</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="/demos.js"></script>
+  <script src="/center.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc, indIcon } = TA;
+      if (!(await TA.bootCenter({ type: 'home' }))) return;
+      const C = window.TRENDAI_CENTER;
+      const solName = (id) => (C.SOLUTIONS.find((s) => s.id === id) || {}).name || id;
+
+      document.getElementById('indGrid').innerHTML = C.INDUSTRIES.map((i) => `
+        <a class="card" href="/industry/${i.id}" style="gap:14px;border-top:3px solid ${i.color};text-decoration:none">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">
+            <div style="display:flex;flex-direction:column;gap:3px"><span class="small" style="color:${i.color};letter-spacing:.04em;text-transform:uppercase">${esc(i.name)}</span><span style="font-size:19px;font-weight:700">${esc(i.company)}</span></div>
+            <span style="width:40px;height:40px;border-radius:10px;background:${i.color}1f;color:${i.color};display:flex;align-items:center;justify-content:center">${indIcon(i.icon, 20)}</span>
+          </div>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)">${esc(i.tagline)}</p>
+          <div class="chips">${i.risks.slice(0, 3).map((r) => `<span class="chip">${esc(r)}</span>`).join('')}</div>
+          <div style="display:flex;justify-content:space-between;align-items:center;font-size:12.5px;color:var(--muted);border-top:1px solid var(--base-700);padding-top:12px"><span>${i.regs.join(' · ')}</span><span style="color:var(--cyan-text);font-weight:600">${i.stories.length} stories →</span></div>
+        </a>`).join('');
+
+      const featured = [];
+      C.INDUSTRIES.forEach((i) => i.stories.filter((s) => s.featured).forEach((s) => featured.push({ i, s })));
+      document.getElementById('storyGrid').innerHTML = featured.slice(0, 3).map(({ i, s }) => `
+        <a class="card" href="/story/${s.id}" style="gap:12px;text-decoration:none${s === featured[0].s ? ';border-color:var(--info-line);box-shadow:var(--glow)' : ''}">
+          <div class="small muted" style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:${i.color}"></span>${esc(i.company)} · ${s.minutes} min · ${s.steps.length} steps</div>
+          <span style="font-size:16px;font-weight:600;line-height:1.35">${esc(s.title)}</span>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)">${esc(s.summary)}</p>
+          <div class="chips"><span class="chip info">${esc(solName(s.solution))}</span></div>
+          <span style="margin-top:auto;font-size:13.5px;color:var(--cyan-text);font-weight:600">Start story →</span>
+        </a>`).join('');
+
+      document.getElementById('tryGrid').innerHTML = C.QUICK.map((q) => `
+        <a class="card" href="/tool/${q.tool}" style="gap:10px;text-decoration:none">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-size:15px;font-weight:600">${esc(q.name)}</span><span class="chip info">${esc(solName(q.solution))}</span></div>
+          <p style="margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)">${esc(q.blurb)}</p>
+          <span style="margin-top:auto;font-size:13.5px;color:var(--cyan-text);font-weight:600">Open →</span>
+        </a>`).join('');
+
+      document.getElementById('solGrid').innerHTML = C.SOLUTIONS.map((s) => `
+        <a class="card" href="/solutions#${s.id}" style="gap:6px;text-decoration:none"><span style="font-weight:600">${esc(s.name)}</span><span class="small muted">${esc(s.blurb)}</span></a>`).join('');
+    })();
+  </script>
+</body>
+</html>

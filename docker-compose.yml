@@ -49,6 +49,7 @@ services:
       # Shown in the side menu and on Services & health.
       PLATFORM_HOST_LABEL: ${PLATFORM_HOST_LABEL:-}
       COMPOSE_PROFILES: ${COMPOSE_PROFILES:-}
+      PLATFORM_REPLAY_IFACE: ${PLATFORM_REPLAY_IFACE:-}
     volumes:
       - portal_data:/data
     depends_on:
@@ -60,6 +61,7 @@ services:
       - ai-scanner
       - v1-chatbot
       - ai-target
+      - vuln-api
     restart: unless-stopped
 
   # --- V1 File Security Scanner (Go) — internal only ----------------------
@@ -198,6 +200,38 @@ services:
       ollama:
         condition: service_started
         required: false   # Ollama is optional (profile local-llm); an external LLM is set in Connections
+    restart: unless-stopped
+
+  # --- Vulnerable API (Flask) — deliberately insecure, internal only ------
+  # SQLi / weak auth / XSS demo for Cloud & Container Security stories.
+  # Reached through the portal at /vulnapi. Lab network only.
+  vuln-api:
+    build:
+      context: ./tools/vuln-api
+    container_name: trendai-vuln-api
+    restart: unless-stopped
+
+  # --- Apache Struts target (prebuilt image) — attack-sim profile ---------
+  # Vulnerable server for the Server & Workload Protection (IPS) story.
+  # Only runs with COMPOSE_PROFILES=attack-sim. Lab network only.
+  struts-target:
+    image: andrefernandes86/demo-apachestruts-target
+    container_name: trendai-struts-target
+    profiles: ["attack-sim"]
+    restart: unless-stopped
+
+  # --- Network PCAP replay — attack-sim profile, host networking ----------
+  # Idle until a presenter triggers a replay (see tools/net-replay/README).
+  # Emits real packets out the host NIC for a network sensor on the segment.
+  net-replay:
+    build:
+      context: ./tools/net-replay
+    container_name: trendai-net-replay
+    profiles: ["attack-sim"]
+    network_mode: host
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
     restart: unless-stopped
 
   # --- Smish Detector (Flask, HTTPS/self-signed) — internal only ----------
