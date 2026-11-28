@@ -59,6 +59,14 @@ function defaults() {
     aiGuard: { apiKey: '', url: '', maxKb: 48, maxChunks: 64, failClosed: false },
     fileSecurity: { apiKey: '', region: 'us-east-1', pml: true, failClosed: true },
     llm: { endpoints, defaultId, assignments: {} },
+    // External labs and host-dependent demo tools: addresses and tokens only.
+    demoInfra: {
+      replayIface: process.env.PLATFORM_REPLAY_IFACE || '',
+      targetBaseUrl: process.env.AI_TARGET_PUBLIC_URL || '',
+      k8sUrl: '', k8sToken: '',
+      cloudStorageUrl: '', cloudStorageToken: '',
+      mcpReadOnly: true,
+    },
     updatedAt: null,
   };
 }
@@ -116,6 +124,8 @@ class ConnectionStore {
     const m = (o) => { const k = o.apiKey || ''; delete o.apiKey; o.apiKeySet = !!k; o.apiKeyHint = k ? '••••' + k.slice(-4) : ''; };
     m(d.visionOne); m(d.aiGuard); m(d.fileSecurity);
     d.llm.endpoints.forEach(m);
+    const tok = (o, k) => { const v = o[k] || ''; delete o[k]; o[k + 'Set'] = !!v; o[k + 'Hint'] = v ? '••••' + v.slice(-4) : ''; };
+    tok(d.demoInfra, 'k8sToken'); tok(d.demoInfra, 'cloudStorageToken');
     const r = resolve(this.data);
     d.effective = { aiGuardUrl: r.agUrl, aiGuardKeyFrom: this.data.aiGuard.apiKey ? 'own' : (r.agKey ? 'visionOne' : 'none'),
       fileSecurityKeyFrom: this.data.fileSecurity.apiKey ? 'own' : (r.fsKey ? 'visionOne' : 'none') };
@@ -179,6 +189,17 @@ class ConnectionStore {
         }
       }
       for (const [tool, ep] of Object.entries(d.llm.assignments)) if (!ids.includes(ep)) delete d.llm.assignments[tool];
+    }
+    if (p.demoInfra) {
+      const di = d.demoInfra, pi = p.demoInfra;
+      for (const k of ['replayIface', 'targetBaseUrl', 'k8sUrl', 'cloudStorageUrl']) {
+        if (typeof pi[k] === 'string') di[k] = pi[k].trim().slice(0, 300);
+      }
+      for (const k of ['k8sToken', 'cloudStorageToken']) {
+        if (pi[k + 'Clear']) di[k] = '';
+        else if (typeof pi[k] === 'string' && pi[k].trim()) di[k] = pi[k].trim();
+      }
+      if (pi.mcpReadOnly != null) di.mcpReadOnly = !!pi.mcpReadOnly;
     }
     d.updatedAt = new Date().toISOString();
     this.save();

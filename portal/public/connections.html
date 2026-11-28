@@ -93,6 +93,19 @@
           <p class="muted small" style="margin:0">AI Scanner picks its target model per scan in the tool itself.</p>
         </section>
 
+        <section class="card" aria-labelledby="infra-h">
+          <div><h2 id="infra-h" style="font-size:16px">Demo infrastructure &amp; external labs</h2><p class="lead small">Endpoints, URLs and tokens the newer tools and external labs need. Leave blank to keep a tool in its built-in demo mode.</p></div>
+          <div class="grid wide">
+            <label class="field">Network PCAP replay interface <span class="hint">host NIC on the monitored segment</span><input type="text" id="diIface" placeholder="e.g. ens18" class="mono"></label>
+            <label class="field">Public AI target URL (for Vantyr) <span class="hint">lab network only, no login</span><input type="text" id="diTarget" placeholder="http://host:8090" class="mono"></label>
+            <label class="field">Kubernetes cluster API URL <span class="hint">Container Security lab</span><input type="text" id="diK8sUrl" placeholder="https://k8s.lab:6443" class="mono"></label>
+            <label class="field">Kubernetes service-account token<input type="password" id="diK8sToken" placeholder="Paste token" class="mono"></label>
+            <label class="field">Cloud storage scan endpoint <span class="hint">AWS / Azure File Security lab</span><input type="text" id="diCloudUrl" placeholder="https://… or s3://bucket" class="mono"></label>
+            <label class="field">Cloud storage access token / key<input type="password" id="diCloudToken" placeholder="Paste credential" class="mono"></label>
+          </div>
+          <label class="check"><input type="checkbox" id="diMcpRo">Vision One MCP server runs read-only</label>
+        </section>
+
         <div class="actions" style="justify-content:flex-end">
           <span class="msg" id="saveMsg"></span>
           <button class="btn" type="button" id="discard">Discard changes</button>
@@ -148,6 +161,14 @@
         document.querySelector('[data-clear=fileSecurity]').hidden = !C.fileSecurity.apiKeySet;
         ['v1Key', 'agKey', 'fsKey'].forEach((id) => { $(id).value = ''; });
         eps = C.llm.endpoints.map((e) => ({ ...e, apiKey: '' }));
+        const di = C.demoInfra || {};
+        $('diIface').value = di.replayIface || '';
+        $('diTarget').value = di.targetBaseUrl || '';
+        $('diK8sUrl').value = di.k8sUrl || '';
+        $('diCloudUrl').value = di.cloudStorageUrl || '';
+        $('diK8sToken').value = ''; $('diK8sToken').placeholder = di.k8sTokenSet ? 'Stored ' + di.k8sTokenHint + ' · blank keeps it' : 'Paste token';
+        $('diCloudToken').value = ''; $('diCloudToken').placeholder = di.cloudStorageTokenSet ? 'Stored ' + di.cloudStorageTokenHint + ' · blank keeps it' : 'Paste credential';
+        $('diMcpRo').checked = di.mcpReadOnly !== false;
         renderEps(); renderAssign(); renderSync();
         $('keySource').textContent = `Encryption key source: ${m.keySource}${m.keySource === 'PLATFORM_SECRET' ? '' : ' (set PLATFORM_SECRET to keep the key out of the data volume)'}.`;
       }
@@ -229,6 +250,12 @@
             ...(key('agKey') ? { apiKey: key('agKey') } : {}), ...(clears.aiGuard ? { clearKey: true } : {}) },
           fileSecurity: { region: $('fsRegion').value, pml: $('fsPml').checked, failClosed: $('fsFail').checked,
             ...(key('fsKey') ? { apiKey: key('fsKey') } : {}), ...(clears.fileSecurity ? { clearKey: true } : {}) },
+          demoInfra: {
+            replayIface: $('diIface').value, targetBaseUrl: $('diTarget').value, k8sUrl: $('diK8sUrl').value, cloudStorageUrl: $('diCloudUrl').value,
+            mcpReadOnly: $('diMcpRo').checked,
+            ...($('diK8sToken').value.trim() ? { k8sToken: $('diK8sToken').value.trim() } : {}),
+            ...($('diCloudToken').value.trim() ? { cloudStorageToken: $('diCloudToken').value.trim() } : {}),
+          },
           llm: { endpoints: eps.map((e) => ({ id: e.id, name: e.name, provider: e.provider, baseUrl: e.baseUrl, model: e.model, ...(e.apiKey ? { apiKey: e.apiKey } : {}) })),
             defaultId: C._def || C.llm.defaultId, assignments: C._assign || {} },
         };

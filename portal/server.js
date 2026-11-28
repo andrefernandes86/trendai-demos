@@ -40,6 +40,8 @@ const DEMOS = {
   aiscanner: { target: svcUrl('aiscanner', 'http://ai-scanner:8000'),          secure: true },
   v1chat:    { target: svcUrl('v1chat', 'http://v1-chatbot:8000'),          secure: true },
   aitarget:  { target: svcUrl('aitarget', 'http://ai-target:8000'),           secure: true },
+  vulnapi:   { target: svcUrl('vulnapi', 'http://vuln-api:5000'),             secure: true },
+  struts:    { target: svcUrl('struts', 'http://struts-target:8080'),          secure: true },
 };
 
 // ---------------------------------------------------------------------------
@@ -297,7 +299,12 @@ function shellPage(name) {
     sendPage(res, name);
   };
 }
-app.get(['/', '/index.html', '/dashboard', '/dashboard.html'], shellPage('dashboard.html'));
+app.get(['/', '/index.html'], shellPage('center.html'));
+app.get(['/tools', '/dashboard', '/dashboard.html'], shellPage('dashboard.html'));
+app.get(['/stories', '/stories.html'], shellPage('stories.html'));
+app.get(['/solutions', '/solutions.html'], shellPage('solutions.html'));
+app.get('/industry/:id', shellPage('industry.html'));
+app.get('/story/:id', shellPage('story.html'));
 app.get(['/activity', '/activity.html'], shellPage('activity.html'));
 app.get(['/connections', '/connections.html'], shellPage('connections.html'));
 app.get(['/system', '/system.html'], shellPage('system.html'));

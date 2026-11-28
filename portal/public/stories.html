@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>All demo stories · TrendAI Demo Center</title>
+  <link rel="icon" href="/logo.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <link rel="stylesheet" href="/ui/trendai.css" />
+</head>
+<body data-page="stories">
+  <div class="shell">
+    <aside class="side" id="side" aria-label="Demo Center navigation"></aside>
+    <main class="main">
+      <header class="section" style="gap:8px"><span class="eyebrow">Demo Center</span><h1>All demo stories</h1><p class="lead">Every guided scenario across the industries. Filter by industry or solution.</p></header>
+      <form class="actions" style="align-items:flex-end" id="filters">
+        <label class="field" style="width:220px">Industry<select id="fInd"><option value="">All industries</option></select></label>
+        <label class="field" style="width:220px">Solution<select id="fSol"><option value="">All solutions</option></select></label>
+        <label class="field" style="flex:1 1 220px">Search<input type="search" id="fQ" placeholder="Title or summary…"></label>
+      </form>
+      <div class="grid wide" id="grid"></div>
+    </main>
+  </div>
+  <script src="/demos.js"></script>
+  <script src="/center.js"></script>
+  <script src="/ui/shell.js"></script>
+  <script>
+    (async () => {
+      const { esc } = TA;
+      if (!(await TA.bootCenter({ type: 'stories' }))) return;
+      const C = window.TRENDAI_CENTER;
+      const $ = (id) => document.getElementById(id);
+      const all = [];
+      C.INDUSTRIES.forEach((i) => i.stories.forEach((s) => all.push({ i, s })));
+      const solName = (x) => (C.SOLUTIONS.find((y) => y.id === x) || {}).name || x;
+      $('fInd').innerHTML += C.INDUSTRIES.map((i) => `<option value="${i.id}">${esc(i.company)}</option>`).join('');
+      $('fSol').innerHTML += C.SOLUTIONS.map((s) => `<option value="${s.id}">${esc(s.name)}</option>`).join('');
+      const params = new URLSearchParams(location.search);
+      if (params.get('q')) $('fQ').value = params.get('q');
+      function render() {
+        const ind = $('fInd').value, sol = $('fSol').value, q = $('fQ').value.trim().toLowerCase();
+        const rows = all.filter(({ i, s }) => (!ind || i.id === ind) && (!sol || s.solution === sol) && (!q || (s.title + ' ' + s.summary).toLowerCase().includes(q)));
+        $('grid').innerHTML = rows.length ? rows.map(({ i, s }) => `
+          <a class="card" href="/story/${s.id}" style="gap:12px;text-decoration:none">
+            <div class="small muted" style="display:flex;gap:8px;align-items:center"><span style="width:8px;height:8px;border-radius:2px;background:${i.color}"></span>${esc(i.company)} · ${s.minutes} min · ${s.steps.length} steps</div>
+            <span style="font-size:16px;font-weight:600;line-height:1.35">${esc(s.title)}</span>
+            <p style="margin:0;font-size:13.5px;line-height:1.5;color:var(--muted)">${esc(s.summary)}</p>
+            <div class="chips"><span class="chip info">${esc(solName(s.solution))}</span></div>
+            <span style="margin-top:auto;font-size:13.5px;color:var(--cyan-text);font-weight:600">Start story →</span>
+          </a>`).join('') : '<div class="empty">No stories match these filters.</div>';
+      }
+      ['fInd', 'fSol'].forEach((id) => $(id).onchange = render);
+      $('fQ').oninput = render; $('filters').onsubmit = (e) => { e.preventDefault(); render(); };
+      render();
+    })();
+  </script>
+</body>
+</html>
